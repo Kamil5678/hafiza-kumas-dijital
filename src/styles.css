@@ -87,3 +87,10 @@
     letter-spacing: -0.02em;
   }
 }
+
+@media print {
+  header, nav, .print\:hidden { display: none !important; }
+  body { background: white !important; color: black !important; }
+  main { padding: 0 !important; max-width: none !important; }
+  @page { margin: 16mm; }
+}

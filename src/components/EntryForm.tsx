@@ -25,6 +25,7 @@ export function EntryForm({
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [summary, setSummary] = useState("");
+  const [detail, setDetail] = useState("");
   const [keywords, setKeywords] = useState("");
   const [reflection, setReflection] = useState("");
   const [images, setImages] = useState<string[]>([]);
@@ -50,6 +51,7 @@ export function EntryForm({
       title: title.trim(),
       date,
       summary: summary.trim(),
+      detail: detail.trim(),
       keywords: keywords
         .split(",")
         .map((k) => k.trim())
@@ -61,6 +63,7 @@ export function EntryForm({
     toast.success("Kaydedildi ✿");
     setTitle("");
     setSummary("");
+    setDetail("");
     setKeywords("");
     setReflection("");
     setImages([]);
@@ -130,6 +133,17 @@ export function EntryForm({
           onChange={(e) => setSummary(e.target.value)}
           rows={3}
           placeholder="Bugün öğrendiğinin özünü üç cümleyle yaz."
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="detail">Detay (opsiyonel)</Label>
+        <Textarea
+          id="detail"
+          value={detail}
+          onChange={(e) => setDetail(e.target.value)}
+          rows={4}
+          placeholder="Uzun açıklama, teknik notlar, kaynak…"
         />
       </div>
 

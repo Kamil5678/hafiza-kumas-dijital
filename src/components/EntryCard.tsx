@@ -86,6 +86,17 @@ export function EntryCard({ entry }: { entry: Entry }) {
 
       <p className="mt-3 text-sm leading-relaxed text-foreground/85">{entry.summary}</p>
 
+      {entry.detail && (
+        <details className="mt-3 group/detail">
+          <summary className="cursor-pointer text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground">
+            Detayı göster
+          </summary>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground/80">
+            {entry.detail}
+          </p>
+        </details>
+      )}
+
       {entry.reflection && (
         <div className="mt-3 rounded-lg border-l-2 border-clay/70 bg-accent/40 px-3 py-2 text-sm italic text-foreground/80">
           {entry.reflection}

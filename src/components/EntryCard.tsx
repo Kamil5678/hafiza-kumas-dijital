@@ -1,6 +1,12 @@
-import { CATEGORIES, deleteEntry, type Entry } from "@/lib/tekstil-store";
+import { CATEGORIES, deleteEntry, STATUSES, updateEntry, type Entry, type Status } from "@/lib/tekstil-store";
 import { Badge } from "@/components/ui/badge";
 import { Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +21,7 @@ import {
 
 export function EntryCard({ entry }: { entry: Entry }) {
   const cat = CATEGORIES.find((c) => c.key === entry.category);
+  const status = STATUSES.find((s) => s.key === entry.status) ?? STATUSES[0];
   const dateLabel = new Date(entry.date).toLocaleDateString("tr-TR", {
     day: "numeric",
     month: "long",
@@ -25,14 +32,33 @@ export function EntryCard({ entry }: { entry: Entry }) {
     <article className="group relative rounded-2xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
             <Badge variant="secondary" className="rounded-full font-normal">
               {cat?.short}
             </Badge>
             <span className="text-muted-foreground">{dateLabel}</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-2 py-0.5 text-[11px] text-foreground/80 transition-colors hover:bg-accent">
+                <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
+                {status.label}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {STATUSES.map((s) => (
+                  <DropdownMenuItem
+                    key={s.key}
+                    onClick={() => updateEntry(entry.id, { status: s.key as Status })}
+                    className="gap-2"
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+                    {s.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <h3 className="font-display text-xl leading-tight">{entry.title}</h3>
         </div>
+
 
         <AlertDialog>
           <AlertDialogTrigger asChild>

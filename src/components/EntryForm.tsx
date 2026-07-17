@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { addEntry, CATEGORIES, fileToDataUrl, type CategoryKey } from "@/lib/tekstil-store";
+import { addEntry, CATEGORIES, fileToDataUrl, STATUSES, type CategoryKey, type Status } from "@/lib/tekstil-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,7 +28,9 @@ export function EntryForm({
   const [keywords, setKeywords] = useState("");
   const [reflection, setReflection] = useState("");
   const [images, setImages] = useState<string[]>([]);
+  const [status, setStatus] = useState<Status>("ogrenilecek");
   const [saving, setSaving] = useState(false);
+
 
   async function onFiles(files: FileList | null) {
     if (!files) return;
@@ -54,6 +56,7 @@ export function EntryForm({
         .filter(Boolean),
       reflection: reflection.trim(),
       images,
+      status,
     });
     toast.success("Kaydedildi ✿");
     setTitle("");
@@ -61,9 +64,11 @@ export function EntryForm({
     setKeywords("");
     setReflection("");
     setImages([]);
+    setStatus("ogrenilecek");
     setSaving(false);
     onDone?.();
   }
+
 
   return (
     <form onSubmit={submit} className="space-y-5">

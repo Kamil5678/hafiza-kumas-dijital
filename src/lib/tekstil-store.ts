@@ -37,11 +37,14 @@ function read(): Entry[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as Entry[]) : [];
+    const list = raw ? (JSON.parse(raw) as Entry[]) : [];
+    // migrate legacy entries missing status
+    return list.map((e) => ({ ...e, status: e.status ?? "ogrenilecek" }));
   } catch {
     return [];
   }
 }
+
 
 function write(entries: Entry[]) {
   localStorage.setItem(KEY, JSON.stringify(entries));

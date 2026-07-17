@@ -137,6 +137,17 @@ export function EntryForm({
       </div>
 
       <div className="space-y-2">
+        <Label htmlFor="detail">Detay (opsiyonel)</Label>
+        <Textarea
+          id="detail"
+          value={detail}
+          onChange={(e) => setDetail(e.target.value)}
+          rows={4}
+          placeholder="Uzun açıklama, teknik notlar, kaynak…"
+        />
+      </div>
+
+      <div className="space-y-2">
         <Label htmlFor="keywords">Anahtar Kelimeler</Label>
         <Input
           id="keywords"

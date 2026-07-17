@@ -25,6 +25,7 @@ export function EntryForm({
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [summary, setSummary] = useState("");
+  const [detail, setDetail] = useState("");
   const [keywords, setKeywords] = useState("");
   const [reflection, setReflection] = useState("");
   const [images, setImages] = useState<string[]>([]);

@@ -29,7 +29,15 @@ export function SiteHeader() {
               {c.short}
             </Link>
           ))}
+          <Link
+            to="/haftalik-tekrar"
+            className="rounded-full px-3 py-1.5 text-clay transition-colors hover:bg-accent"
+            activeProps={{ className: "bg-clay text-primary-foreground hover:bg-clay hover:text-primary-foreground" }}
+          >
+            Haftalık Tekrar
+          </Link>
         </nav>
+
       </div>
     </header>
   );

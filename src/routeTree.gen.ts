@@ -9,9 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as HaftalikTekrarRouteImport } from './routes/haftalik-tekrar'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as KategoriSlugRouteImport } from './routes/kategori.$slug'
 
+const HaftalikTekrarRoute = HaftalikTekrarRouteImport.update({
+  id: '/haftalik-tekrar',
+  path: '/haftalik-tekrar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -25,32 +31,43 @@ const KategoriSlugRoute = KategoriSlugRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/haftalik-tekrar': typeof HaftalikTekrarRoute
   '/kategori/$slug': typeof KategoriSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/haftalik-tekrar': typeof HaftalikTekrarRoute
   '/kategori/$slug': typeof KategoriSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/haftalik-tekrar': typeof HaftalikTekrarRoute
   '/kategori/$slug': typeof KategoriSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/kategori/$slug'
+  fullPaths: '/' | '/haftalik-tekrar' | '/kategori/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/kategori/$slug'
-  id: '__root__' | '/' | '/kategori/$slug'
+  to: '/' | '/haftalik-tekrar' | '/kategori/$slug'
+  id: '__root__' | '/' | '/haftalik-tekrar' | '/kategori/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  HaftalikTekrarRoute: typeof HaftalikTekrarRoute
   KategoriSlugRoute: typeof KategoriSlugRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/haftalik-tekrar': {
+      id: '/haftalik-tekrar'
+      path: '/haftalik-tekrar'
+      fullPath: '/haftalik-tekrar'
+      preLoaderRoute: typeof HaftalikTekrarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  HaftalikTekrarRoute: HaftalikTekrarRoute,
   KategoriSlugRoute: KategoriSlugRoute,
 }
 export const routeTree = rootRouteImport

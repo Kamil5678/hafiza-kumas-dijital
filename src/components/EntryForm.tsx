@@ -51,6 +51,7 @@ export function EntryForm({
       title: title.trim(),
       date,
       summary: summary.trim(),
+      detail: detail.trim(),
       keywords: keywords
         .split(",")
         .map((k) => k.trim())
@@ -62,6 +63,7 @@ export function EntryForm({
     toast.success("Kaydedildi ✿");
     setTitle("");
     setSummary("");
+    setDetail("");
     setKeywords("");
     setReflection("");
     setImages([]);

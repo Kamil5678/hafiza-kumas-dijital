@@ -88,21 +88,39 @@ export function EntryForm({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label>Kategori</Label>
-        <Select value={category} onValueChange={(v) => setCategory(v as CategoryKey)}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {CATEGORIES.map((c) => (
-              <SelectItem key={c.key} value={c.key}>
-                {c.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label>Kategori</Label>
+          <Select value={category} onValueChange={(v) => setCategory(v as CategoryKey)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CATEGORIES.map((c) => (
+                <SelectItem key={c.key} value={c.key}>
+                  {c.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Durum</Label>
+          <Select value={status} onValueChange={(v) => setStatus(v as Status)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUSES.map((s) => (
+                <SelectItem key={s.key} value={s.key}>
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
 
       <div className="space-y-2">
         <Label htmlFor="summary">3 Cümlelik Özet</Label>

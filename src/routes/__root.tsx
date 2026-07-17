@@ -83,16 +83,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Bir tekstil ve moda tasarımı öğrencisi için sade günlük öğrenme defteri: kumaş yapıları, strateji, istatistik ve Elisé notları.",
+          "Kumaş yapıları, strateji, istatistik ve Elisé notları için sade bir günlük öğrenme defteri.",
       },
       { name: "author", content: "Tekstil Hafızam" },
-      { property: "og:title", content: "Tekstil Hafızam" },
+      { property: "og:title", content: "Tekstil Hafızam — günlük öğrenme defteri" },
       {
         property: "og:description",
-        content: "Günlük öğrendiklerini kaydet, ara ve büyüt.",
+        content: "Kumaş yapıları, strateji, istatistik ve Elisé notları için sade bir günlük öğrenme defteri.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Tekstil Hafızam — günlük öğrenme defteri" },
+      { name: "twitter:description", content: "Kumaş yapıları, strateji, istatistik ve Elisé notları için sade bir günlük öğrenme defteri." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4ee7df90-0ded-4775-87d6-9593e8b1a0e2/id-preview-48161e05--13cfed94-fcfc-469f-99e8-fc9444b5972b.lovable.app-1784325402938.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4ee7df90-0ded-4775-87d6-9593e8b1a0e2/id-preview-48161e05--13cfed94-fcfc-469f-99e8-fc9444b5972b.lovable.app-1784325402938.png" },
     ],
     links: [
       {

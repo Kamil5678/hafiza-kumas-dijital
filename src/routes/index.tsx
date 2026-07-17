@@ -24,10 +24,10 @@ export const Route = createFileRoute("/")({
         content:
           "Kumaş yapıları, strateji, istatistik ve Elisé notları için sade bir günlük öğrenme defteri.",
       },
-      { property: "og:title", content: "Tekstil Hafızam" },
+      { property: "og:title", content: "Tekstil Hafızam — günlük öğrenme defteri" },
       {
         property: "og:description",
-        content: "Günlük öğrendiklerini kaydet, ara ve büyüt.",
+        content: "Kumaş yapıları, strateji, istatistik ve Elisé notları için sade bir günlük öğrenme defteri.",
       },
     ],
   }),

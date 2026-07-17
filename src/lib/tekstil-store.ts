@@ -9,6 +9,14 @@ export const CATEGORIES: { key: CategoryKey; label: string; short: string; descr
   { key: "elise", label: "Elisé Bilgi Bankası", short: "Elisé", description: "Elisé özel arşivi" },
 ];
 
+export type Status = "ogrenilecek" | "tekrar" | "ogrenildi";
+
+export const STATUSES: { key: Status; label: string; dot: string }[] = [
+  { key: "ogrenilecek", label: "Öğrenilecek", dot: "bg-amber-500" },
+  { key: "tekrar", label: "Tekrar ediliyor", dot: "bg-clay" },
+  { key: "ogrenildi", label: "Öğrenildi", dot: "bg-sage" },
+];
+
 export type Entry = {
   id: string;
   category: CategoryKey;
@@ -18,8 +26,10 @@ export type Entry = {
   keywords: string[];
   reflection: string;
   images: string[]; // data URLs
+  status: Status;
   createdAt: number;
 };
+
 
 const KEY = "tekstil-hafizam-entries-v1";
 

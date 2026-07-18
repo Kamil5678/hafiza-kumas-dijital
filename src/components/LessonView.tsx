@@ -14,6 +14,7 @@ interface LessonContent {
   sections: Record<string, any>;
   quiz: any[];
   flashcards: any[];
+  images: string[];
   generated_at: string;
 }
 
@@ -25,7 +26,7 @@ interface Props {
   onRegenerate: (slug: string) => Promise<void>;
 }
 
-type Tab = "content" | "visuals" | "quiz" | "flashcards" | "notes" | "related";
+type Tab = "content" | "visuals" | "quiz" | "flashcards" | "notes";
 
 const TAB_LABELS: Record<Tab, string> = {
   content: "İçerik",
@@ -33,7 +34,6 @@ const TAB_LABELS: Record<Tab, string> = {
   quiz: "Quiz",
   flashcards: "Kartlar",
   notes: "Notlar",
-  related: "İlgili",
 };
 
 const SECTION_ORDER = [
@@ -56,10 +56,23 @@ const SECTION_ORDER = [
   "vaka_calismasi",
   "ozet",
   "terimler_sozlugu",
-  "ilgili_konular",
   "referanslar",
   "gorsel_sema",
 ];
+
+function renderText(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={i} className="sc-highlight">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
 
 export default function LessonView({
   node,
@@ -198,7 +211,13 @@ export default function LessonView({
 
       <div className="lv-body">
         {tab === "content" && <ContentTab sections={content.sections} />}
-        {tab === "visuals" && <VisualsTab sections={content.sections} />}
+        {tab === "visuals" && (
+          <VisualsTab
+            sections={content.sections}
+            images={content.images || []}
+            title={content.node_title}
+          />
+        )}
         {tab === "quiz" && <QuizTab quiz={content.quiz} />}
         {tab === "flashcards" && <FlashcardsTab cards={content.flashcards} />}
         {tab === "notes" && (
@@ -207,14 +226,6 @@ export default function LessonView({
             setNote={setNote}
             onSave={handleSaveNote}
             saved={noteSaved}
-          />
-        )}
-        {tab === "related" && (
-          <RelatedTab
-            sections={content.sections}
-            siblings={siblings}
-            currentSlug={node.slug}
-            onNavigate={onNavigate}
           />
         )}
       </div>
@@ -271,13 +282,13 @@ function SectionCard({ section }: { section: any }) {
 
 function SectionBody({ section }: { section: any }) {
   if (section.type === "text") {
-    return <p className="sc-text">{section.content}</p>;
+    return <p className="sc-text">{renderText(section.content)}</p>;
   }
   if (section.type === "list") {
     return (
       <ul className="sc-list">
         {section.items.map((item: string, i: number) => (
-          <li key={i}>{item}</li>
+          <li key={i}>{renderText(item)}</li>
         ))}
       </ul>
     );
@@ -297,7 +308,7 @@ function SectionBody({ section }: { section: any }) {
             {section.rows.map((row: string[], i: number) => (
               <tr key={i}>
                 {row.map((cell, j) => (
-                  <td key={j}>{cell}</td>
+                  <td key={j}>{renderText(cell)}</td>
                 ))}
               </tr>
             ))}
@@ -332,10 +343,37 @@ function SectionBody({ section }: { section: any }) {
   return null;
 }
 
-function VisualsTab({ sections }: { sections: Record<string, any> }) {
+function VisualsTab({
+  sections,
+  images,
+  title,
+}: {
+  sections: Record<string, any>;
+  images: string[];
+  title: string;
+}) {
   const diagram = sections["gorsel_sema"];
   return (
     <div className="vt">
+      {images.length > 0 && (
+        <div className="vt-gallery">
+          {images.map((url, i) => (
+            <div key={i} className="vt-image-card">
+              <img
+                src={url}
+                alt={`${title} - görsel ${i + 1}`}
+                loading="lazy"
+                className="vt-image"
+              />
+            </div>
+          ))}
+        </div>
+      )}
+      {images.length === 0 && (
+        <div className="vt-empty">
+          <p>Bu ders için görsel bulunmamaktadır.</p>
+        </div>
+      )}
       {diagram && (
         <div className="vt-card">
           <h3>{diagram.title}</h3>
@@ -515,52 +553,6 @@ function NotesTab({
         </button>
         {saved && <span className="nt-saved">Kaydedildi ✓</span>}
       </div>
-    </div>
-  );
-}
-
-function RelatedTab({
-  sections,
-  siblings,
-  currentSlug,
-  onNavigate,
-}: {
-  sections: Record<string, any>;
-  siblings: ContentNode[];
-  currentSlug: string;
-  onNavigate: (slug: string) => void;
-}) {
-  const relatedSection = sections["ilgili_konular"];
-  const relatedTitles = relatedSection?.items || [];
-  const sibLessons = siblings.filter((s) => s.slug !== currentSlug);
-  const extraTitles = relatedTitles.filter(
-    (t: string) => !siblings.some((s) => s.title === t)
-  );
-
-  return (
-    <div className="rt">
-      <h3 className="rt-title">İlgili Konular</h3>
-      {sibLessons.length === 0 && extraTitles.length === 0 ? (
-        <p className="rt-empty">İlgili konu bulunmamaktadır.</p>
-      ) : (
-        <div className="rt-list">
-          {sibLessons.map((s) => (
-            <button
-              key={s.id}
-              className="rt-item"
-              onClick={() => onNavigate(s.slug)}
-            >
-              <span>{s.title}</span>
-              <span className="rt-arrow">→</span>
-            </button>
-          ))}
-          {extraTitles.map((t: string, i: number) => (
-            <div key={i} className="rt-item static">
-              <span>{t}</span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

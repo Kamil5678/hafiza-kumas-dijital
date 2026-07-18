@@ -50,7 +50,6 @@ button {
   color: inherit;
 }
 
-/* ─── Layout ─── */
 .app {
   min-height: 100vh;
   display: flex;
@@ -59,7 +58,6 @@ button {
 
 /* ─── Topbar ─── */
 .topbar {
-  background: var(--surface);
   border-bottom: 1px solid var(--border);
   padding: 0 2rem;
   position: sticky;
@@ -101,7 +99,6 @@ button {
   font-weight: 600;
 }
 
-/* ─── Breadcrumbs ─── */
 .crumbs {
   display: flex;
   align-items: center;
@@ -164,7 +161,6 @@ button {
   font-weight: 400;
 }
 
-/* ─── Modules ─── */
 .modules-label {
   font-size: 0.75rem;
   font-weight: 600;
@@ -256,17 +252,9 @@ button {
   flex-direction: column;
 }
 
-.tree.level-1 {
-  padding-left: 1.5rem;
-}
-
-.tree.level-2 {
-  padding-left: 1.5rem;
-}
-
-.tree.level-3 {
-  padding-left: 1.5rem;
-}
+.tree.level-1 { padding-left: 1.5rem; }
+.tree.level-2 { padding-left: 1.5rem; }
+.tree.level-3 { padding-left: 1.5rem; }
 
 .tree-item {
   display: flex;
@@ -322,7 +310,7 @@ button {
   flex-direction: column;
 }
 
-/* ─── Generation Bar (fixed bottom) ─── */
+/* ─── Generation Bar ─── */
 .gen-bar {
   position: fixed;
   bottom: 0;
@@ -377,10 +365,6 @@ button {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
-}
-
-.gen-bar-text {
-  font-weight: 400;
 }
 
 .gen-bar-text strong {
@@ -568,7 +552,6 @@ button {
   opacity: 0.5;
 }
 
-/* ─── Lesson Header ─── */
 .lv-head {
   display: flex;
   justify-content: space-between;
@@ -621,7 +604,6 @@ button {
   opacity: 0.4;
 }
 
-/* ─── Tabs ─── */
 .lv-tabs {
   display: flex;
   gap: 0.25rem;
@@ -687,6 +669,11 @@ button {
   font-size: 0.92rem;
   color: var(--text-2);
   line-height: 1.7;
+}
+
+.sc-highlight {
+  font-weight: 700;
+  color: var(--text);
 }
 
 .sc-list {
@@ -816,6 +803,40 @@ button {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+.vt-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.vt-image-card {
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  aspect-ratio: 4 / 3;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.vt-image-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.vt-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.vt-empty {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-3);
+  font-size: 0.9rem;
 }
 
 .vt-card h3 {
@@ -1149,62 +1170,6 @@ button {
   color: var(--success);
 }
 
-/* ─── Related ─── */
-.rt {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.rt-title {
-  font-size: 0.78rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-3);
-}
-
-.rt-empty {
-  font-size: 0.88rem;
-  color: var(--text-3);
-}
-
-.rt-list {
-  display: flex;
-  flex-direction: column;
-  border-top: 1px solid var(--border);
-}
-
-.rt-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.875rem 0;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.9rem;
-  color: var(--text-2);
-  text-align: left;
-  transition: padding var(--transition);
-}
-
-.rt-item:hover {
-  padding-left: 0.5rem;
-  color: var(--text);
-}
-
-.rt-item.static {
-  cursor: default;
-}
-
-.rt-item.static:hover {
-  padding-left: 0;
-  color: var(--text-2);
-}
-
-.rt-arrow {
-  color: var(--text-3);
-}
-
 /* ─── Lesson Footer ─── */
 .lv-foot {
   display: flex;
@@ -1234,28 +1199,13 @@ button {
 
 /* ─── Responsive ─── */
 @media (max-width: 640px) {
-  .topbar {
-    padding: 0 1rem;
-  }
-  .topbar-inner {
-    gap: 1rem;
-  }
-  .content {
-    padding: 2rem 1rem 6rem;
-  }
-  .hero-title {
-    font-size: 1.75rem;
-  }
-  .lv-title {
-    font-size: 1.5rem;
-  }
-  .gen-bar-toggle {
-    padding: 0.625rem 1rem;
-  }
-  .gen-bar-detail {
-    padding: 1rem;
-  }
-  .ft-grid {
-    grid-template-columns: 1fr;
-  }
+  .topbar { padding: 0 1rem; }
+  .topbar-inner { gap: 1rem; }
+  .content { padding: 2rem 1rem 6rem; }
+  .hero-title { font-size: 1.75rem; }
+  .lv-title { font-size: 1.5rem; }
+  .gen-bar-toggle { padding: 0.625rem 1rem; }
+  .gen-bar-detail { padding: 1rem; }
+  .ft-grid { grid-template-columns: 1fr; }
+  .vt-gallery { grid-template-columns: 1fr; }
 }

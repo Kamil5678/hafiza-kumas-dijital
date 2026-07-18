@@ -245,7 +245,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Compact generation status bar — fixed at bottom */}
       <div className={`gen-bar ${genExpanded ? "expanded" : ""} ${genStatus.generating ? "active" : ""} ${allGenerated ? "done" : ""}`}>
         <button
           className="gen-bar-toggle"

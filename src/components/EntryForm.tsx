@@ -22,6 +22,7 @@ export function EntryForm({
   onDone?: () => void;
 }) {
   const [category, setCategory] = useState<CategoryKey>(defaultCategory ?? "kumas");
+  const [subcategory, setSubcategory] = useState<string>("");
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [summary, setSummary] = useState("");
@@ -31,6 +32,9 @@ export function EntryForm({
   const [images, setImages] = useState<string[]>([]);
   const [status, setStatus] = useState<Status>("ogrenilecek");
   const [saving, setSaving] = useState(false);
+
+  const currentCat = CATEGORIES.find((c) => c.key === category);
+  const subs = currentCat?.subcategories ?? [];
 
 
   async function onFiles(files: FileList | null) {
@@ -48,6 +52,7 @@ export function EntryForm({
     setSaving(true);
     addEntry({
       category,
+      subcategory: subcategory || undefined,
       title: title.trim(),
       date,
       summary: summary.trim(),
@@ -68,6 +73,7 @@ export function EntryForm({
     setReflection("");
     setImages([]);
     setStatus("ogrenilecek");
+    setSubcategory("");
     setSaving(false);
     onDone?.();
   }
@@ -93,8 +99,14 @@ export function EntryForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>Kategori</Label>
-          <Select value={category} onValueChange={(v) => setCategory(v as CategoryKey)}>
+          <Label>Ana Kategori</Label>
+          <Select
+            value={category}
+            onValueChange={(v) => {
+              setCategory(v as CategoryKey);
+              setSubcategory("");
+            }}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -123,6 +135,28 @@ export function EntryForm({
           </Select>
         </div>
       </div>
+
+      {subs.length > 0 && (
+        <div className="space-y-2">
+          <Label>Alt Kategori (opsiyonel)</Label>
+          <Select
+            value={subcategory || "__none__"}
+            onValueChange={(v) => setSubcategory(v === "__none__" ? "" : v)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Alt kategori seç…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">— seçme —</SelectItem>
+              {subs.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
 
       <div className="space-y-2">

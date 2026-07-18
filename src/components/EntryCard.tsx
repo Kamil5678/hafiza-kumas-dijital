@@ -36,6 +36,11 @@ export function EntryCard({ entry }: { entry: Entry }) {
             <Badge variant="secondary" className="rounded-full font-normal">
               {cat?.short}
             </Badge>
+            {entry.subcategory && (
+              <Badge variant="outline" className="rounded-full font-normal">
+                {entry.subcategory}
+              </Badge>
+            )}
             <span className="text-muted-foreground">{dateLabel}</span>
             <DropdownMenu>
               <DropdownMenuTrigger className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-2 py-0.5 text-[11px] text-foreground/80 transition-colors hover:bg-accent">

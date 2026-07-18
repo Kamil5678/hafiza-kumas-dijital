@@ -28,6 +28,7 @@ function CategoryPage() {
   const { entries } = useEntries();
   const [q, setQ] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [activeSub, setActiveSub] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
   const list = useMemo(() => entries.filter((e) => e.category === slug), [entries, slug]);
@@ -41,14 +42,15 @@ function CategoryPage() {
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
     return list.filter((e) => {
+      if (activeSub && e.subcategory !== activeSub) return false;
       if (activeTag && !e.keywords.includes(activeTag)) return false;
       if (!term) return true;
-      return [e.title, e.summary, e.reflection, e.keywords.join(" ")]
+      return [e.title, e.summary, e.detail ?? "", e.reflection, e.keywords.join(" ")]
         .join(" ")
         .toLowerCase()
         .includes(term);
     });
-  }, [list, q, activeTag]);
+  }, [list, q, activeTag, activeSub]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -100,6 +102,42 @@ function CategoryPage() {
             {filtered.length} / {list.length} kayıt
           </span>
         </div>
+
+        {category.subcategories.length > 0 && (
+          <div className="mb-4 flex flex-wrap gap-1.5">
+            <button
+              onClick={() => setActiveSub(null)}
+              className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                activeSub === null
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border bg-background text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              Tüm alt başlıklar
+            </button>
+            {category.subcategories.map((s) => {
+              const count = list.filter((e) => e.subcategory === s).length;
+              return (
+                <button
+                  key={s}
+                  onClick={() => setActiveSub(activeSub === s ? null : s)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
+                    activeSub === s
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border bg-background text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {s}
+                  {count > 0 && (
+                    <span className="rounded-full bg-muted/60 px-1.5 text-[10px] text-muted-foreground">
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {tags.length > 0 && (
           <div className="mb-6 flex flex-wrap gap-1.5">

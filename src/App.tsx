@@ -38,13 +38,15 @@ function Icon({ type }: { type: NodeType }) {
 interface Crumb {
   id: string;
   title: string;
+  slug: string;
 }
 
 export default function App() {
-  const [roots, setRoots] = useState<ContentNode[]>([]);
+  const [, setRoots] = useState<ContentNode[]>([]);
   const [current, setCurrent] = useState<ContentNode | null>(null);
   const [children, setChildren] = useState<ContentNode[]>([]);
   const [crumbs, setCrumbs] = useState<Crumb[]>([]);
+  const [allNodes, setAllNodes] = useState<ContentNode[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +57,7 @@ export default function App() {
     try {
       const data = await fetchRoots();
       setRoots(data);
+      setAllNodes((prev) => [...prev, ...data]);
       setCurrent(null);
       setChildren(data);
       setCrumbs([]);
@@ -75,7 +78,12 @@ export default function App() {
       const [kids, path] = await Promise.all([fetchChildren(node.id), fetchPath(node.id)]);
       setCurrent(node);
       setChildren(kids);
-      setCrumbs(path.map((p: ContentNode) => ({ id: p.id, title: p.title })));
+      setCrumbs(path.map((p: ContentNode) => ({ id: p.id, title: p.title, slug: p.slug })));
+      setAllNodes((prev) => {
+        const merged = [...prev];
+        for (const k of kids) if (!merged.find((m) => m.id === k.id)) merged.push(k);
+        return merged;
+      });
       const c: Record<string, number> = {};
       for (const n of kids) c[n.id] = await countDescendants(n.id);
       setCounts(c);
@@ -86,6 +94,12 @@ export default function App() {
       setLoading(false);
     }
   }, []);
+
+  const navigateBySlug = useCallback((slug: string) => {
+    const node = allNodes.find((n) => n.slug === slug);
+    if (node) openNode(node);
+    else loadRoots();
+  }, [allNodes, openNode, loadRoots]);
 
   const goHome = useCallback(() => { loadRoots(); }, [loadRoots]);
 
@@ -117,12 +131,7 @@ export default function App() {
           {crumbs.map((c) => (
             <span key={c.id} className="crumb-wrap">
               <span className="crumb-sep">/</span>
-              <button className="crumb" onClick={() => {
-                if (c.id === current?.id) return;
-                const node = [...roots, ...children].find((n) => n.id === c.id);
-                if (node) openNode(node);
-                else goHome();
-              }}>{c.title}</button>
+              <button className="crumb" onClick={() => navigateBySlug(c.slug)}>{c.title}</button>
             </span>
           ))}
         </nav>
@@ -144,7 +153,7 @@ export default function App() {
 
         {error && <div className="error">Hata: {error}</div>}
 
-        {showLesson && <LessonView node={current!} />}
+        {showLesson && <LessonView node={current!} onNavigate={navigateBySlug} />}
 
         {loading ? (
           <div className="loading">Yükleniyor…</div>
@@ -166,7 +175,6 @@ export default function App() {
                 <div className={`grid grid-${t}`}>
                   {grouped[t].map((node) => {
                     const childCount = counts[node.id] ?? 0;
-                    const isLeaf = node.type === "subtopic" || childCount === 0;
                     return (
                       <button
                         key={node.id}
@@ -178,7 +186,7 @@ export default function App() {
                           <span className="card-title">{node.title}</span>
                           {node.description && <span className="card-desc">{node.description}</span>}
                           <span className="card-meta">
-                            {isLeaf ? "içerik yaprağı" : `${childCount} alt başlık`}
+                            {childCount > 0 ? `${childCount} alt başlık` : "ders içeriği"}
                           </span>
                         </span>
                         <span className="card-arrow">→</span>

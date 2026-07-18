@@ -19,7 +19,7 @@ interface ContentNode {
 
 type Difficulty = "beginner" | "intermediate" | "advanced";
 
-interface FullLessonParams {
+interface LessonParams {
   slug: string;
   difficulty?: Difficulty;
   force?: boolean;
@@ -54,7 +54,7 @@ function ok(data: unknown): Response {
   });
 }
 
-function validateParams(body: unknown): FullLessonParams | null {
+function validateParams(body: unknown): LessonParams | null {
   if (!body || typeof body !== "object") return null;
   const b = body as Record<string, unknown>;
   const slug = b.slug;
@@ -66,7 +66,6 @@ function validateParams(body: unknown): FullLessonParams | null {
   return { slug: slug.trim(), difficulty, force, use_ai };
 }
 
-// Deterministic pseudo-random
 function seededRandom(seed: string): () => number {
   let h = 2166136261;
   for (let i = 0; i < seed.length; i++) {
@@ -95,193 +94,233 @@ function shuffle<T>(rng: () => number, arr: T[]): T[] {
   return out;
 }
 
-// ---- Deterministic full-lesson builder ----
-function buildFullLesson(
+// ---- Textbook-format lesson builder ----
+// Every section is a separate structured field — never a single long text blob.
+function buildLesson(
   node: ContentNode,
   path: ContentNode[],
   children: ContentNode[],
   siblings: ContentNode[],
   diff: Difficulty,
 ): Record<string, unknown> {
-  const rng = seededRandom(node.slug + ":full:" + diff);
+  const rng = seededRandom(node.slug + ":lesson:" + diff);
   const modulePath = path.map((p) => p.title);
   const parent = path.length > 1 ? path[path.length - 2] : null;
   const root = path[0];
 
-  const objectives = [
+  // --- 1. Ders Özeti (summary) ---
+  const summary = {
+    title: node.title,
+    description: node.description ?? `${node.title} dersi.`,
+    module_path: modulePath,
+    difficulty: diff,
+    difficulty_label: DIFF_LABEL[diff],
+    estimated_minutes: DIFF_MINUTES[diff],
+    one_liner: `${node.title}, ${parent ? parent.title : "tekstil bilimi"} alanının temel konularından biridir.`,
+    key_points: [
+      `${node.title} kavramının tanımı ve temel prensipleri`,
+      `Üretim/uygulama süreçleri ve adımları`,
+      `Avantajlar, dezavantajlar ve uygulama alanları`,
+      `Kalite kontrol ve standartlar`,
+      `Sektörel bağlam ve gerçek dünya örnekleri`,
+    ],
+  };
+
+  // --- 2. Öğrenme Hedefleri (learning objectives) ---
+  const learningObjectives = [
     `${node.title} kavramını tanımlayabilme ve temel prensiplerini açıklayabilme`,
-    `${node.title} bileşenlerini, sınıflandırmasını ve özelliklerini ayırt edebilme`,
+    `${node.title} bileşenlerini ve sınıflandırmasını ayırt edebilme`,
     `${node.title} üretim/uygulama süreçlerini adım adım tarif edebilme`,
     `${node.title} avantaj ve dezavantajlarını değerlendirebilme`,
     `${node.title} uygulama alanlarını ve sektördeki yerini analiz edebilme`,
     `${node.title} ile ilgili terimleri doğru kullanabilme ve ölçüm yapabilme`,
   ].slice(0, diff === "beginner" ? 4 : diff === "advanced" ? 6 : 5);
 
-  const intro = `${node.title}, ${parent ? parent.title + " alanının" : "tekstil ve moda bilimlerinin"} önemli bir konusudur. ${node.description ?? "Bu ders, konunun temel kavramlarını, bilimsel arka planını ve pratik uygulamalarını kapsamlı biçimde ele alır."} Bu içerik, üniversite seviyesinde ${DIFF_LABEL[diff].toLowerCase()} düzey için hazırlanmıştır ve ${children.length > 0 ? `${children.length} alt başlıkla` : "detaylı alt başlıklarla"} desteklenmiştir.`;
-
-  const whyMatters = `${node.title}, modern tekstil ve moda endüstrisinde kritik bir rol oynar. ${root ? root.title + " modülünün" : "Bu alanın"} temel taşlarından biri olarak, ürün kalitesi, üretim verimliliği ve sürdürülebilirlik üzerinde doğrudan etkilidir. Bu konunun iyi anlaşılması, sektör profesyonellerinin teknik kararlar almasını, kalite sorunlarını çözmeyi ve yenilikçi çözümler geliştirmeyi sağlar. ${parent ? parent.title + " bağlamında" : "Tekstil bilimi bağlamında"} ${node.title.toLowerCase()} bilgisi, hem teorik temel hem de pratik uygulama açısından vazgeçilmezdir.`;
-
-  const explanation = `${node.title} konusu, ${parent ? parent.title + " içinde" : "tekstil bilimleri içinde"} sistematik bir yaklaşımla incelenmelidir. Temel olarak, ${node.title.toLowerCase()} süreci bir dizi aşamalı adımdan oluşur ve her adım belirli fiziksel, kimyasal veya mekanik prensiplere dayanır. ${diff === "advanced" ? "İleri düzeyde, bu prensiplerin matematiksel modellenmesi ve optimizasyonu da gereklidir." : "Bu prensiplerin anlaşılması, doğru uygulama ve kalite kontrol için temel oluşturur."} ${children.length > 0 ? `Konu şu alt başlıklar altında işlenir: ${children.slice(0, 5).map((c) => c.title).join(", ")}${children.length > 5 ? " ve diğerleri" : ""}.` : ""} Her alt başlık, teorik bilgiyi pratik örnekle destekler.`;
-
-  const history = `${node.title} kavramının tarihsel gelişimi, tekstil teknolojisinin evrimiyle yakından ilişkilidir. Antik dönemlerde ${pick(rng, ["el emeği ile", "basit aletlerle", "geleneksel yöntemlerle"])} yapılan bu süreç, Sanayi Devrimi ile mekanikleşmiş ve 20. yüzyılda otomatik sistemlere kavuşmuştur. ${pick(rng, ["1950'lerde sentetik elyafların gelişi", "1970'lerde dijital kontrol sistemleri", "2000'lerde nanoteknoloji uygulamaları"])} bu alanda önemli bir dönüm noktası olmuştur. Günümüzde ${node.title.toLowerCase()}, ${pick(rng, ["endüstri 4.0", "sürdürülebilirlik", "dijitalleşme"])} trendleriyle yeniden şekillenmektedir.`;
-
-  const technical = `Bilimsel açıdan ${node.title}, ${pick(rng, ["polimer kimyası", "malzeme bilimi", "termodinamik", "reoloji", "mühendislik mekanik"])} prensiplerine dayanır. ${diff === "advanced" ? "Moleküler düzeyde, polimer zincirlerinin oryantasyonu, kristalinite derecesi ve molekül ağırlığı dağılımı ürün performansını belirler. İleri analizlerde DSC, TGA, XRD ve SEM gibi karakterizasyon yöntemleri kullanılır." : "Temel düzeyde, malzemenin fiziksel ve kimyasal özelliklerinin anlaşılması yeterlidir."} ${node.title.toLowerCase()} sürecinde sıcaklık, nem, basınç ve süre gibi parametreler kaliteyi doğrudan etkiler ve optimize edilmelidir.`;
-
-  const processSteps = children.length > 0
-    ? children.slice(0, 6).map((c, i) => ({
-        step: i + 1,
-        title: c.title,
-        description: c.description ?? `${c.title} aşaması, sürecin ${i + 1}. adımıdır ve dikkatle uygulanmalıdır.`,
-      }))
-    : [
-        { step: 1, title: "Hazırlık", description: "Hammadde ve ekipman hazırlığı." },
-        { step: 2, title: "Ana İşlem", description: `${node.title} ana üretim/uygulama adımı.` },
-        { step: 3, title: "Kalite Kontrol", description: "Çıktıların test ve doğrulanması." },
-      ];
-
-  const properties = [
-    { property: "Mukavemet", value: pick(rng, ["Yüksek", "Orta", "Düşük-Orta"]), note: "Kopma dayanımı" },
-    { property: "Esneklik", value: pick(rng, ["İyi", "Orta", "Sınırlı"]), note: "Uzama yüzdesi" },
-    { property: "Ömür", value: pick(rng, ["Uzun", "Orta-Uzun", "Orta"]), note: "Aşınma dayanımı" },
-    { property: "Maliyet", value: pick(rng, ["Orta", "Yüksek", "Düşük-Orta"]), note: "Birim üretim maliyeti" },
-    { property: "Çevresel Etki", value: pick(rng, ["Düşük", "Orta", "Orta-Yüksek"]), note: "Sürdürülebilirlik" },
-  ];
-
-  const advantages = [
-    `${node.title} uygulaması ürün kalitesini artırır`,
-    "Standart üretim süreçleriyle uyumludur",
-    "Ölçeklenebilir ve endüstriyel üretim için uygundur",
-    "Mevcut ekipmanlarla entegre edilebilir",
-    diff === "advanced" ? "Parametre optimizasyonu ile verimlilik artırılabilir" : "Düşük öğrenme eğriyle uygulanabilir",
-  ];
-
-  const disadvantages = [
-    "Başlangıç yatırımı gerektirebilir",
-    "Belirli kalite standartlarına uyum zorunludur",
-    "Uygun olmayan koşullarda performans düşebilir",
-    "Düzenli bakım ve kalibrasyon gerektirir",
-    diff === "advanced" ? "İleri optimizasyon için uzmanlık gerekir" : "Eğitimli personel gerektirir",
-  ];
-
-  const applications = [
-    { sector: "Tekstil Üretimi", use: `${node.title} ana üretim hattında` },
-    { sector: "Kalite Kontrol", use: "Ürün test ve sertifikasyon" },
-    { sector: "Ar-Ge", use: "Yeni ürün geliştirme" },
-    { sector: "Moda Tasarımı", use: "Malzeme seçimi ve tasarım" },
-  ];
-
-  const examples = [
-    { title: `${node.title} — Endüstriyel Uygulama`, description: `Bir üretim tesisinde ${node.title.toLowerCase()} uygulamasının gerçek dünya örneği ve sonuçları.` },
-    { title: `${node.title} — Vaka Çalışması`, description: `Belirli bir markanın ${node.title.toLowerCase()} sürecini nasıl optimize ettiğini inceleyen vaka.` },
-    { title: `${node.title} — Hata Analizi`, description: `Yanlış ${node.title.toLowerCase()} uygulamasının neden olduğu kalite sorunu ve çözümü.` },
-  ];
-
-  const caseStudies = [
-    {
-      title: `Vaka 1: ${node.title} Optimizasyonu`,
-      problem: `Düşük verimlilik ve kalite sapmaları`,
-      solution: `Parametre optimizasyonu ve süreç standardizasyonu`,
-      result: `%${Math.floor(rng() * 30) + 15} verimlilik artışı`,
+  // --- 3. Detaylı Anlatım (detailed explanation) — broken into sections ---
+  const detailedExplanation = {
+    introduction: {
+      heading: "Giriş",
+      paragraphs: [
+        `${node.title}, ${parent ? parent.title + " alanının" : "tekstil ve moda bilimlerinin"} önemli bir konusudur. ${node.description ?? "Bu ders, konunun temel kavramlarını ve uygulama boyutlarını ele alır."}`,
+        `Bu içerik, üniversite seviyesinde ${DIFF_LABEL[diff].toLowerCase()} düzey için hazırlanmıştır ve ${children.length > 0 ? `${children.length} alt başlıkla` : "detaylı alt başlıklarla"} desteklenmiştir.`,
+      ],
     },
-    {
-      title: `Vaka 2: ${node.title} Hata Giderme`,
-      problem: `Üretim hatasında tekrarlayan kalite sorunu`,
-      solution: `Kök neden analizi ve düzeltici faaliyet`,
-      result: `Hata oranı %${Math.floor(rng() * 40) + 20} azaldı`,
+    definition: {
+      heading: "Tanım ve Kapsam",
+      paragraphs: [
+        `${node.title}, ${pick(rng, ["belirli fiziksel ve kimyasal prensiplere dayanan", "endüstriyel ölçekte uygulanan", "bilimsel temellere oturtulmuş"])} bir kavramdır.`,
+        `Kapsamı; temel tanımlar, sınıflandırmalar, üretim süreçleri, kalite kontrol ve uygulama alanlarını içerir.`,
+      ],
     },
-  ];
+    classification: {
+      heading: "Sınıflandırma",
+      paragraphs: [
+        `${node.title} ${pick(rng, ["üç ana kategoriye", "iki temel gruba", "birden fazla tipe"])} ayrılır:`,
+      ],
+      items: children.length > 0
+        ? children.slice(0, 6).map((c) => `${c.title}: ${c.description ?? "temel alt kategori"}`)
+        : ["Tip A: Temel özellikler", "Tip B: Gelişmiş özellikler", "Tip C: Özel uygulamalar"],
+    },
+    importance: {
+      heading: "Önemi ve Bağlam",
+      paragraphs: [
+        `${node.title}, modern tekstil endüstrisinde ${pick(rng, ["kalite", "verimlilik", "sürdürülebilirlik"])} açısından kritik bir rol oynar.`,
+        `${root ? root.title + " modülü" : "Bu alan"} içinde ${node.title.toLowerCase()} bilgisi, teknik kararların alınması ve kalite sorunlarının çözümü için vazgeçilmezdir.`,
+      ],
+    },
+  };
 
-  const comparisonTable = {
-    headers: ["Özellik", "Tip A", "Tip B", "Tip C"],
-    rows: [
-      ["Mukavemet", pick(rng, ["Yüksek", "Orta", "Düşük"]), pick(rng, ["Yüksek", "Orta", "Düşük"]), pick(rng, ["Yüksek", "Orta", "Düşük"])],
-      ["Maliyet", pick(rng, ["Düşük", "Orta", "Yüksek"]), pick(rng, ["Düşük", "Orta", "Yüksek"]), pick(rng, ["Düşük", "Orta", "Yüksek"])],
-      ["Uygulama Kolaylığı", pick(rng, ["Kolay", "Orta", "Zor"]), pick(rng, ["Kolay", "Orta", "Zor"]), pick(rng, ["Kolay", "Orta", "Zor"])],
-      ["Çevresel Etki", pick(rng, ["Düşük", "Orta", "Yüksek"]), pick(rng, ["Düşük", "Orta", "Yüksek"]), pick(rng, ["Düşük", "Orta", "Yüksek"])],
+  // --- 4. Bilimsel Açıklamalar (scientific explanation) ---
+  const scientificExplanation = {
+    heading: "Bilimsel ve Teknik Temeller",
+    paragraphs: [
+      `Bilimsel açıdan ${node.title}, ${pick(rng, ["polimer kimyası", "malzeme bilimi", "termodinamik", "reoloji", "mühendislik mekanik"])} prensiplerine dayanır.`,
+      diff === "advanced"
+        ? "İleri düzeyde, moleküler yapı, kristalinite derecesi ve molekül ağırlığı dağılımı ürün performansını belirler. DSC, TGA, XRD ve SEM gibi karakterizasyon yöntemleri kullanılır."
+        : "Temel düzeyde, malzemenin fiziksel ve kimyasal özelliklerinin anlaşılması yeterlidir.",
+      `${node.title.toLowerCase()} sürecinde sıcaklık, nem, basınç ve süre gibi parametreler kaliteyi doğrudan etkiler.`,
+    ],
+    formulas: diff === "advanced"
+      ? [
+          { formula: "σ = F/A", description: "Çekme mukavemeti (kopma dayanımı)" },
+          { formula: "ε = (ΔL/L₀) × 100", description: "Uzama yüzdesi" },
+          { formula: "E = σ/ε", description: "Young modülü (elastisite)" },
+        ]
+      : [
+          { formula: "Verim = (Çıktı / Girdi) × 100", description: "Üretim verimi" },
+        ],
+    parameters: [
+      { name: "Sıcaklık", unit: "°C", typical: pick(rng, ["20-25", "100-150", "180-220"]) },
+      { name: "Nem", unit: "%", typical: pick(rng, ["40-55", "60-65", "65-75"]) },
+      { name: "Süre", unit: "dk", typical: pick(rng, ["15-30", "30-60", "60-120"]) },
     ],
   };
 
-  const relatedMaterials = siblings.filter((s) => s.id !== node.id).slice(0, 4).map((s) => ({
-    title: s.title,
-    slug: s.slug,
-    relation: "Aynı kategoride",
-  }));
-
-  const relatedStandards = [
-    { code: "ISO 9001", title: "Kalite Yönetim Sistemi" },
-    { code: "ISO 14001", title: "Çevre Yönetim Sistemi" },
-    { code: "OEKO-TEX 100", title: "Zararlı Madde Testi" },
+  // --- 5. Örnekler (examples) ---
+  const examples = [
+    {
+      title: `${node.title} — Endüstriyel Uygulama`,
+      scenario: `Bir üretim tesisinde ${node.title.toLowerCase()} uygulamasının gerçekleştirilmesi.`,
+      details: `Tesis, ${node.title.toLowerCase()} sürecini standart parametrelerle uygular. Çıktı kalitesi düzenli olarak test edilir.`,
+      outcome: `Üretim verimliliği %${Math.floor(rng() * 20) + 15} arttı ve kalite sapmaları azaldı.`,
+    },
+    {
+      title: `${node.title} — Vaka Çalışması`,
+      scenario: `Belirli bir markanın ${node.title.toLowerCase()} sürecini optimize etmesi.`,
+      details: `Parametre optimizasyonu ve süreç standardizasyonu ile kalite iyileştirildi.`,
+      outcome: `Maliyet %${Math.floor(rng() * 15) + 10} düştü ve müşteri memnuniyeti arttı.`,
+    },
+    {
+      title: `${node.title} — Hata Analizi`,
+      scenario: `Yanlış ${node.title.toLowerCase()} uygulamasının neden olduğu kalite sorunu.`,
+      details: `Uygun olmayan parametreler nedeniyle ürün standart dışı kaldı. Kök neden analizi yapıldı.`,
+      outcome: `Düzeltici faaliyet sonrası hata oranı %${Math.floor(rng() * 30) + 20} azaldı.`,
+    },
   ];
 
+  // --- 6. Tablolar (tables) ---
+  const tables = {
+    properties: {
+      title: "Özellikler Tablosu",
+      headers: ["Özellik", "Değer", "Not"],
+      rows: [
+        ["Mukavemet", pick(rng, ["Yüksek", "Orta", "Düşük-Orta"]), "Kopma dayanımı"],
+        ["Esneklik", pick(rng, ["İyi", "Orta", "Sınırlı"]), "Uzama yüzdesi"],
+        ["Ömür", pick(rng, ["Uzun", "Orta-Uzun", "Orta"]), "Aşınma dayanımı"],
+        ["Maliyet", pick(rng, ["Orta", "Yüksek", "Düşük-Orta"]), "Birim maliyet"],
+        ["Çevresel Etki", pick(rng, ["Düşük", "Orta", "Orta-Yüksek"]), "Sürdürülebilirlik"],
+      ],
+    },
+    comparison: {
+      title: "Tip Karşılaştırması",
+      headers: ["Özellik", "Tip A", "Tip B", "Tip C"],
+      rows: [
+        ["Mukavemet", pick(rng, ["Yüksek", "Orta", "Düşük"]), pick(rng, ["Yüksek", "Orta", "Düşük"]), pick(rng, ["Yüksek", "Orta", "Düşük"])],
+        ["Maliyet", pick(rng, ["Düşük", "Orta", "Yüksek"]), pick(rng, ["Düşük", "Orta", "Yüksek"]), pick(rng, ["Düşük", "Orta", "Yüksek"])],
+        ["Uygulama", pick(rng, ["Kolay", "Orta", "Zor"]), pick(rng, ["Kolay", "Orta", "Zor"]), pick(rng, ["Kolay", "Orta", "Zor"])],
+      ],
+    },
+    pros_cons: {
+      title: "Avantajlar ve Dezavantajlar",
+      headers: ["Avantajlar", "Dezavantajlar"],
+      rows: [
+        ["Ürün kalitesini artırır", "Başlangıç yatırımı gerektirebilir"],
+        ["Standart süreçlerle uyumlu", "Belirli kalite standartlarına uyum zorunlu"],
+        ["Ölçeklenebilir", "Uygun olmayan koşullarda performans düşer"],
+        ["Mevcut ekipmanlarla entegre", "Düzenli bakım ve kalibrasyon gerektirir"],
+      ],
+    },
+  };
+
+  // --- 7. İlgili Makineler (related machines) ---
   const relatedMachines = [
-    { name: "Üretim Hattı", function: `${node.title} ana üretim` },
-    { name: "Test Cihazı", function: "Kalite kontrol ölçümü" },
+    {
+      name: `${node.title} Ana Ünite`,
+      function: `${node.title} sürecinin ana üretim birimi`,
+      specs: ["Kapasite: 500 kg/saat", "Güç: 15 kW", "Kontrol: PLC otomatik"],
+    },
+    {
+      name: "Test Cihazı",
+      function: "Kalite kontrol ölçüm cihazı",
+      specs: ["Doğruluk: ±0.1%", "Ölçüm: Çekme/aşınma", "Standart: ISO 9001"],
+    },
+    {
+      name: "Hazırlık İstasyonu",
+      function: "Ön işleme ve hazırlık",
+      specs: ["Kapasite: 200 kg", "Sıcaklık: 20-150°C", "Kontrol: Dijital"],
+    },
   ];
 
-  const commonMistakes = [
-    { mistake: "Parametre kontrolünün atlanması", correction: "Her üretim öncesi parametreleri doğrulayın" },
-    { mistake: "Uygun olmayan malzeme seçimi", correction: "Malzeme spesifikasyonuna uyun" },
-    { mistake: "Düzensiz kalibrasyon", correction: "Aylık kalibrasyon takvimi uygulayın" },
-    { mistake: "Kalite kontrol adımının geç atlanması", correction: "Her partide QC testi yapın" },
+  // --- 8. İlgili Malzemeler (related materials) ---
+  const relatedMaterials = [
+    {
+      name: "Ana Hammadde",
+      type: "Baz malzeme",
+      description: `${node.title} sürecinde kullanılan temel hammadde.`,
+    },
+    {
+      name: "Yardımcı Kimyasal",
+      type: "Proses kimyasalı",
+      description: "İşlem sırasında kullanılan yardımcı kimyasal madde.",
+    },
+    {
+      name: "Tamamlayıcı Ürün",
+      type: "Bitiş ürünü",
+      description: `${node.title} sonrası kullanılan tamamlayıcı ürün.`,
+    },
   ];
 
-  const bestPractices = [
-    "Standart iş akışını (SOP) her zaman takip edin",
-    "Düzenli kalibrasyon ve bakım yapın",
-    "Her üretim partisini belgelendirin",
-    "Personel eğitimini güncel tutun",
-    "Sürdürülebilirlik kriterlerini göz önünde bulundurun",
-  ];
+  // --- 9. Özet (lesson summary) ---
+  const lessonSummary = {
+    paragraphs: [
+      `Bu derste ${node.title} kavramı, ${DIFF_LABEL[diff].toLowerCase()} seviyede kapsamlı biçimde işlendi.`,
+      `Öğrenme hedefleri, detaylı anlatım, bilimsel açıklamalar, örnekler ve tablolar ile konu pekiştirildi.`,
+      `${children.length > 0 ? `Konu ${children.length} alt başlıkla` : "Konu detaylı alt başlıklarla"} desteklendi ve ${terminologyCount(children, node)} terim sözlüğe eklendi.`,
+    ],
+    takeaways: [
+      `${node.title} temel kavramı ve önemi`,
+      `${node.title} üretim/uygulama adımları`,
+      `${node.title} avantaj ve dezavantajları`,
+      `${node.title} kalite kontrol ve standartları`,
+      `${node.title} uygulama alanları ve örnekleri`,
+    ],
+  };
 
-  const faqs = [
-    { q: `${node.title} nedir ve ne işe yarar?`, a: `${node.title}, ${parent ? parent.title + " alanında" : "tekstil endüstrisinde"} belirli bir işlevi yerine getiren temel bir kavramdır. Üretim kalitesini ve verimliliği etkiler.` },
-    { q: `${node.title} hangi sektörlerde kullanılır?`, a: "Tekstil, moda, konfeksiyon ve teknik tekstil başta olmak üzere geniş bir yelpazede kullanılır." },
-    { q: `${node.title} öğrenmek ne kadar sürer?`, a: `Temel düzey birkaç haftada öğrenilebilir; ${diff === "advanced" ? "ileri uzmanlık aylar-yıllar gerektirir" : "orta düzey birkaç ay pratik gerektirir"}.` },
-    { q: `${node.title} için hangi sertifikalar önemlidir?`, a: "ISO 9001, OEKO-TEX ve sektöre göre GOTS/GRS sertifikaları önerilir." },
-  ];
-
+  // --- 10. Terimler Sözlüğü (glossary) ---
   const terminology = children.length > 0
-    ? children.slice(0, 8).map((c) => ({
+    ? children.slice(0, 10).map((c) => ({
         term: c.title,
         definition: c.description ?? `${c.title}, ${node.title} konusunun önemli bir terimidir.`,
       }))
     : [
         { term: node.title, definition: node.description ?? "Temel kavram." },
         { term: "Standart", definition: "Kabul edilmiş teknik spesifikasyon." },
-        { term: "Kalite Kontrol", definition: "Ürün özelliklerinin doğrulanması." },
+        { term: "Kalite Kontrol", definition: "Ürün özelliklerinin doğrulanması süreci." },
+        { term: "Spesifikasyon", definition: "Ürünün teknik özellik dokümanı." },
+        { term: "Tolerans", definition: "Kabul edilebilir ölçü sapması." },
       ];
 
-  const visualSuggestions = [
-    { type: "Diyagram", title: `${node.title} Süreç Akışı`, description: `${node.title} adımlarını gösteren akış diyagramı. Her adım kutu, geçişler ok ile gösterilmeli.` },
-    { type: "Grafik", title: `${node.title} Performans Eğrisi`, description: "Parametre değişimine göre performans değişimini gösteren çizgi grafik." },
-    { type: "Tablo", title: `${node.title} Karşılaştırma Tablosu`, description: "Farklı tiplerin özelliklerini karşılaştıran tablo." },
-    { type: "Şema", title: `${node.title} Kesit Görünümü`, description: "Ürün/süreç kesit şeması, katmanları ve bileşenleri gösterir." },
-  ];
-
-  const templates: Record<string, unknown>[] = [];
-  if (node.slug.includes("kalite") || node.slug.includes("test") || node.slug.includes("kontrol")) {
-    templates.push({ type: "Kontrol Listesi", title: `${node.title} Kalite Kontrol Listesi`, items: ["Parametre kontrolü", "Malzeme doğrulama", "Süreç kaydı", "Sonuç raporu"] });
-  }
-  if (node.slug.includes("uretim") || node.slug.includes("dokuma") || node.slug.includes("orme") || node.slug.includes("boya")) {
-    templates.push({ type: "İş Akışı", title: `${node.title} Üretim İş Akışı`, steps: processSteps.map((s) => s.title) });
-  }
-  if (node.slug.includes("iplik") || node.slug.includes("numara")) {
-    templates.push({ type: "Hesap Tablosu", title: `${node.title} Hesaplama Tablosu`, fields: ["Numara", "Uzunluk", "Ağırlık", "Büküm"] });
-  }
-  if (node.slug.includes("kalip") || node.slug.includes("konfeksiyon")) {
-    templates.push({ type: "Kalıp Şablonu", title: `${node.title} Kalıp Şablonu`, fields: ["Beden", "Ölçü", "Müsaade", "Not"] });
-  }
-  if (templates.length === 0) {
-    templates.push({ type: "Özet Çalışma Kağıdı", title: `${node.title} Çalışma Kağıdı`, items: objectives });
-  }
-
-  const practiceQuestions = [
-    `${node.title} kavramını kendi cümlelerinizle tanımlayın.`,
-    `${node.title} avantaj ve dezavantajlarını tartışın.`,
-    `${node.title} için tipik bir uygulama senaryosu yazın.`,
-    diff === "advanced" ? `${node.title} parametre optimizasyonu nasıl yapılır?` : `${node.title} hangi sektörlerde kullanılır?`,
-  ];
-
+  // --- 11. Mini Quiz ---
   const quiz = Array.from({ length: diff === "beginner" ? 4 : 6 }).map((_, i) => {
     const src = children[i % Math.max(children.length, 1)] ?? node;
     const correct = src.title;
@@ -295,80 +334,84 @@ function buildFullLesson(
     };
   });
 
+  // --- 12. Flash Kartlar ---
   const flashcards = (children.length > 0 ? children : [node]).slice(0, diff === "advanced" ? 10 : 6).map((c) => ({
     front: c.title,
     back: c.description ?? `${c.title}, ${node.title} konusunun bir parçasıdır.`,
   }));
 
-  const summary = `${node.title} dersi, ${modulePath.join(" › ")} hiyerarşisinde ${DIFF_LABEL[diff].toLowerCase()} seviyede hazırlanmıştır. ${objectives.length} öğrenme hedefi, ${processSteps.length} üretim adımı, ${terminology.length} terim ve ${quiz.length} quiz sorusu içermektedir. Konunun teorik temelleri, pratik uygulamaları ve sektör bağlamı kapsamlı biçimde işlenmiştir.`;
-
-  const keyTakeaways = [
-    `${node.title} temel kavramı ve önemi`,
-    `${node.title} üretim/uygulama adımları`,
-    `${node.title} avantaj ve dezavantajları`,
-    `${node.title} kalite kontrol ve standartları`,
-    `${node.title} uygulama alanları`,
+  // --- 13. Görsel/Diyagram Önerileri (for visuals tab) ---
+  const visualDiagrams = [
+    {
+      type: "Süreç Akışı",
+      title: `${node.title} Üretim Akış Diyagramı`,
+      description: `${node.title} adımlarını gösteren akış diyagramı. Her adım kutu, geçişler ok ile gösterilmeli. ${children.length > 0 ? `Adımlar: ${children.slice(0, 5).map((c) => c.title).join(" → ")}` : "Hazırlık → Ana İşlem → Kalite Kontrol"}.`,
+      layout: "vertical-flow",
+    },
+    {
+      type: "Şema",
+      title: `${node.title} Kesit Görünümü`,
+      description: "Ürün/süreç kesit şeması. Katmanları, bileşenleri ve ölçüleri gösterir.",
+      layout: "cross-section",
+    },
+    {
+      type: "Grafik",
+      title: `${node.title} Performans Eğrisi`,
+      description: "Parametre değişimine göre performans değişimini gösteren çizgi grafik. X ekseni: parametre, Y ekseni: performans.",
+      layout: "line-chart",
+    },
+    {
+      type: "Karşılaştırma",
+      title: `${node.title} Tip Karşılaştırma Tablosu`,
+      description: "Farklı tiplerin özelliklerini yan yana karşılaştıran tablo diyagramı.",
+      layout: "comparison-table",
+    },
   ];
 
-  const references = [
-    { title: "Tekstil Bilimi ve Teknolojisi", author: "Prof. Dr. örnek", year: "2020" },
-    { title: `${node.title} Üzerine İnceleme`, author: "Akademik yayın", year: "2022" },
-    { title: "Tekstil Terimleri Sözlüğü", author: "TMMOB", year: "2019" },
-    { title: "ISO Standartlar Kataloğu", author: "ISO", year: "2023" },
-  ];
-
-  const relatedLessons = siblings.filter((s) => s.id !== node.id).slice(0, 5).map((s) => ({
+  // --- 14. İlgili Konular (related topics) ---
+  const relatedTopics = siblings.filter((s) => s.id !== node.id).slice(0, 6).map((s) => ({
     title: s.title,
     slug: s.slug,
+    description: s.description ?? "",
     relation: "Aynı kategori",
   }));
 
+  // --- 15. Etiketler ---
   const tags = [node.title, ...(parent ? [parent.title] : []), ...(root ? [root.title] : []), "tekstil", "moda", "üniversite"];
 
   return {
-    title: node.title,
+    // Meta
     slug: node.slug,
+    title: node.title,
     difficulty: diff,
     difficulty_label: DIFF_LABEL[diff],
     estimated_minutes: DIFF_MINUTES[diff],
     module_path: modulePath,
     tags,
-    introduction: intro,
-    learning_objectives: objectives,
-    why_it_matters: whyMatters,
-    full_explanation: explanation,
-    historical_background: history,
-    technical_explanation: technical,
-    production_process: processSteps,
-    properties: properties,
-    advantages,
-    disadvantages,
-    applications,
-    real_world_examples: examples,
-    case_studies: caseStudies,
-    comparison_table: comparisonTable,
-    related_materials: relatedMaterials,
+    generated_by: "deterministic",
+    // Sections — each separate, never a single long text
+    summary,
+    learning_objectives: learningObjectives,
+    detailed_explanation: detailedExplanation,
+    scientific_explanation: scientificExplanation,
+    examples,
+    tables,
     related_machines: relatedMachines,
-    related_processes: processSteps.slice(0, 3).map((s) => ({ name: s.title, description: s.description })),
-    related_standards: relatedStandards,
-    common_mistakes: commonMistakes,
-    best_practices: bestPractices,
-    faqs,
+    related_materials: relatedMaterials,
+    lesson_summary: lessonSummary,
     terminology,
-    visual_suggestions: visualSuggestions,
-    templates,
-    practice_questions: practiceQuestions,
     mini_quiz: quiz,
     flashcards,
-    summary,
-    key_takeaways: keyTakeaways,
-    references,
-    related_lessons: relatedLessons,
-    generated_by: "deterministic",
+    visual_diagrams: visualDiagrams,
+    related_topics: relatedTopics,
   };
 }
 
-// ---- Optional AI layer (activates only if OPENAI_API_KEY is set) ----
+function terminologyCount(children: ContentNode[], node: ContentNode): number {
+  return children.length > 0 ? Math.min(children.length, 10) : 5;
+}
+
+// ---- Optional AI layer ----
 async function buildWithAI(
   node: ContentNode,
   path: ContentNode[],
@@ -380,7 +423,7 @@ async function buildWithAI(
   if (!apiKey) return null;
 
   const modulePath = path.map((p) => p.title);
-  const prompt = `Sen bir tekstil ve moda eğitimi uzmanısın. Aşağıdaki konu için üniversite seviyesinde, Türkçe, yapılandırılmış bir ders içeriği üret. SADECE geçerli JSON döndür, başka metin yazma.
+  const prompt = `Sen tekstil ve moda eğitimi uzmanı bir akademisyensin. Aşağıdaki konu için üniversite seviyesinde, Türkçe, profesyonel ders kitabı formatında yapılandırılmış içerik üret. SADECE geçerli JSON döndür.
 
 Konu: ${node.title}
 Açıklama: ${node.description ?? ""}
@@ -388,36 +431,34 @@ Modül yolu: ${modulePath.join(" › ")}
 Alt başlıklar: ${children.map((c) => c.title).join(", ") || "yok"}
 Zorluk: ${DIFF_LABEL[diff]}
 
-Şu alanları içeren bir JSON nesnesi döndür (tüm değerler Türkçe):
+Aşağıdaki yapıda JSON döndür (tüm değerler Türkçe, hiçbir bölüm tek uzun metin olmasın, paragraflara bölünmüş olsun):
 {
-  "title": string,
-  "introduction": string (kısa girişparagraf),
-  "learning_objectives": string[] (4-6 hedef),
-  "why_it_matters": string,
-  "full_explanation": string (ders kitabı tarzında, 3-4 paragraf),
-  "historical_background": string,
-  "technical_explanation": string,
-  "production_process": [{"step": number, "title": string, "description": string}],
-  "properties": [{"property": string, "value": string, "note": string}],
-  "advantages": string[],
-  "disadvantages": string[],
-  "applications": [{"sector": string, "use": string}],
-  "real_world_examples": [{"title": string, "description": string}],
-  "case_studies": [{"title": string, "problem": string, "solution": string, "result": string}],
-  "comparison_table": {"headers": string[], "rows": string[][]},
-  "related_materials": [{"title": string, "relation": string}],
-  "related_standards": [{"code": string, "title": string}],
-  "common_mistakes": [{"mistake": string, "correction": string}],
-  "best_practices": string[],
-  "faqs": [{"q": string, "a": string}],
+  "summary": {"title": string, "description": string, "one_liner": string, "key_points": string[]},
+  "learning_objectives": string[],
+  "detailed_explanation": {
+    "introduction": {"heading": string, "paragraphs": string[]},
+    "definition": {"heading": string, "paragraphs": string[], "items": string[]},
+    "classification": {"heading": string, "paragraphs": string[], "items": string[]},
+    "importance": {"heading": string, "paragraphs": string[]}
+  },
+  "scientific_explanation": {
+    "heading": string, "paragraphs": string[],
+    "formulas": [{"formula": string, "description": string}],
+    "parameters": [{"name": string, "unit": string, "typical": string}]
+  },
+  "examples": [{"title": string, "scenario": string, "details": string, "outcome": string}],
+  "tables": {
+    "properties": {"title": string, "headers": string[], "rows": string[][]},
+    "comparison": {"title": string, "headers": string[], "rows": string[][]},
+    "pros_cons": {"title": string, "headers": string[], "rows": string[][]}
+  },
+  "related_machines": [{"name": string, "function": string, "specs": string[]}],
+  "related_materials": [{"name": string, "type": string, "description": string}],
+  "lesson_summary": {"paragraphs": string[], "takeaways": string[]},
   "terminology": [{"term": string, "definition": string}],
-  "visual_suggestions": [{"type": string, "title": string, "description": string}],
-  "practice_questions": string[],
   "mini_quiz": [{"question": string, "options": string[], "correct_index": number, "explanation": string}],
   "flashcards": [{"front": string, "back": string}],
-  "summary": string,
-  "key_takeaways": string[],
-  "references": [{"title": string, "author": string, "year": string}],
+  "visual_diagrams": [{"type": string, "title": string, "description": string, "layout": string}],
   "tags": string[]
 }
 
@@ -426,10 +467,7 @@ Sadece JSON döndür.`;
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
@@ -448,12 +486,15 @@ Sadece JSON döndür.`;
     const content = data?.choices?.[0]?.message?.content;
     if (!content) return null;
     const parsed = JSON.parse(content);
-    // Enrich with metadata
     parsed.slug = node.slug;
+    parsed.title = node.title;
     parsed.difficulty = diff;
     parsed.difficulty_label = DIFF_LABEL[diff];
     parsed.module_path = modulePath;
     parsed.estimated_minutes = DIFF_MINUTES[diff];
+    parsed.related_topics = siblings.filter((s) => s.id !== node.id).slice(0, 6).map((s) => ({
+      title: s.title, slug: s.slug, description: s.description ?? "", relation: "Aynı kategori",
+    }));
     parsed.generated_by = "ai-openai";
     return parsed;
   } catch (err) {
@@ -489,7 +530,7 @@ Deno.serve(async (req: Request) => {
     if (nodeErr) throw nodeErr;
     if (!node) return fail(`'${params.slug}' slug'ına sahip düğüm bulunamadı.`, 404);
 
-    // 2. Check cache unless force
+    // 2. Check cache unless force — once generated, never regenerate
     if (!params.force) {
       const { data: cached, error: cacheErr } = await supabase
         .from("generated_content")
@@ -524,7 +565,6 @@ Deno.serve(async (req: Request) => {
       if (!sibRes.error) siblings = (sibRes.data ?? []) as ContentNode[];
     }
 
-    // Build path
     const path: ContentNode[] = [node];
     const seen = new Set<string>([node.id]);
     let cur: ContentNode | null = node;
@@ -541,7 +581,7 @@ Deno.serve(async (req: Request) => {
       cur = parent;
     }
 
-    // 4. Generate — try AI first if enabled, fall back to deterministic
+    // 4. Generate — AI first if enabled, fall back to deterministic
     let payload: Record<string, unknown>;
     let usedAI = false;
     if (params.use_ai) {
@@ -550,13 +590,13 @@ Deno.serve(async (req: Request) => {
         payload = aiResult;
         usedAI = true;
       } else {
-        payload = buildFullLesson(node, path, children, siblings, params.difficulty);
+        payload = buildLesson(node, path, children, siblings, params.difficulty);
       }
     } else {
-      payload = buildFullLesson(node, path, children, siblings, params.difficulty);
+      payload = buildLesson(node, path, children, siblings, params.difficulty);
     }
 
-    // 5. Upsert cache
+    // 5. Save to cache — once saved, won't regenerate unless force
     const now = new Date().toISOString();
     const { error: upErr } = await supabase
       .from("generated_content")
@@ -573,7 +613,7 @@ Deno.serve(async (req: Request) => {
     return ok({ cached: false, generated_at: now, generated_by: usedAI ? "ai" : "deterministic", content: payload });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("Full lesson engine error:", msg);
+    console.error("Lesson engine error:", msg);
     return fail(`Ders motoru hatası: ${msg}`, 500);
   }
 });

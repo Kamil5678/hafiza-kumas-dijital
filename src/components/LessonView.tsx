@@ -1,9 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
 import {
-  generateFullLesson,
-  fetchCachedFullLesson,
-  type FullLessonResult,
-} from "../lib/fullLesson";
+  generateLesson,
+  fetchCachedLesson,
+  fetchNotes,
+  saveNote,
+  deleteNote,
+  type LessonResult,
+  type LessonNote,
+} from "../lib/lesson";
 import type { ContentNode, Difficulty } from "../lib/supabase";
 
 const DIFFICULTIES: { value: Difficulty; label: string }[] = [
@@ -12,6 +16,7 @@ const DIFFICULTIES: { value: Difficulty; label: string }[] = [
   { value: "advanced", label: "İleri" },
 ];
 
+// Type helpers
 function str(v: unknown): string {
   return typeof v === "string" ? v : "";
 }
@@ -22,22 +27,40 @@ function obj(v: unknown): Record<string, unknown> {
   return (v && typeof v === "object" && !Array.isArray(v)) ? (v as Record<string, unknown>) : {};
 }
 
-export function LessonView({ node }: { node: ContentNode }) {
+type TabId = "content" | "visuals" | "quiz" | "flashcards" | "notes" | "related" | "ask";
+
+const TABS: { id: TabId; label: string; icon: string }[] = [
+  { id: "content", label: "Konu Anlatımı", icon: "📖" },
+  { id: "visuals", label: "Görseller ve Diyagramlar", icon: "📊" },
+  { id: "quiz", label: "Quiz", icon: "✅" },
+  { id: "flashcards", label: "Flash Kart", icon: "🃏" },
+  { id: "notes", label: "Notlar", icon: "📝" },
+  { id: "related", label: "İlgili Konular", icon: "🔗" },
+  { id: "ask", label: "AI'ya Soru Sor", icon: "🤖" },
+];
+
+export function LessonView({
+  node,
+  onNavigate,
+}: {
+  node: ContentNode;
+  onNavigate: (slug: string) => void;
+}) {
   const [difficulty, setDifficulty] = useState<Difficulty>("intermediate");
-  const [result, setResult] = useState<FullLessonResult | null>(null);
+  const [result, setResult] = useState<LessonResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState<TabId>("content");
 
   const load = useCallback(async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cached = await fetchCachedFullLesson(node.slug, difficulty);
+      const cached = await fetchCachedLesson(node.slug, difficulty);
       if (cached && !force) {
         setResult(cached);
       } else {
-        const r = await generateFullLesson({ slug: node.slug, difficulty, force });
+        const r = await generateLesson({ slug: node.slug, difficulty, force });
         setResult(r);
       }
     } catch (e) {
@@ -54,7 +77,7 @@ export function LessonView({ node }: { node: ContentNode }) {
       setLoading(true);
       setError(null);
       try {
-        const cached = await fetchCachedFullLesson(node.slug, difficulty);
+        const cached = await fetchCachedLesson(node.slug, difficulty);
         if (active) setResult(cached);
       } catch (e) {
         if (active) setError(e instanceof Error ? e.message : String(e));
@@ -67,19 +90,19 @@ export function LessonView({ node }: { node: ContentNode }) {
 
   const c = result?.content ?? {};
 
-  const tabs = [
-    { id: "overview", label: "Genel Bakış" },
-    { id: "content", label: "Ders İçeriği" },
-    { id: "process", label: "Süreç & Özellikler" },
-    { id: "examples", label: "Örnekler & Vakalar" },
-    { id: "practice", label: "Pratik & Quiz" },
-    { id: "reference", label: "Terimler & Kaynak" },
-  ];
-
   return (
     <section className="lesson-view">
       <div className="lesson-head">
-        <div className="lesson-head-title">Ders İçeriği Motoru</div>
+        <div className="lesson-head-info">
+          <div className="lesson-head-title">{str(c.title) || node.title}</div>
+          {arr<string>(c.module_path).length > 0 && (
+            <div className="content-path">
+              {arr<string>(c.module_path).map((p, i) => (
+                <span key={i}>{p}{i < arr(c.module_path).length - 1 ? " › " : ""}</span>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="lesson-controls">
           <label className="control">
             <span>Seviye</span>
@@ -87,9 +110,6 @@ export function LessonView({ node }: { node: ContentNode }) {
               {DIFFICULTIES.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
             </select>
           </label>
-          <button className="btn-engine" disabled={loading} onClick={() => load(false)}>
-            {loading ? "Yükleniyor…" : "Dersi Aç"}
-          </button>
           <button className="btn-engine ghost" disabled={loading} onClick={() => load(true)} title="Yeniden üret">
             ↻ Yeniden Üret
           </button>
@@ -104,52 +124,47 @@ export function LessonView({ node }: { node: ContentNode }) {
         <div className="lesson-body">
           <div className="content-meta">
             <span className={`badge ${result.cached ? "cached" : "fresh"}`}>
-              {result.cached ? "Önbellekten" : "Yeni üretildi"}
+              {result.cached ? "Kayıtlı" : "Yeni üretildi"}
             </span>
             {result.generated_by && (
-              <span className="badge source">{result.generated_by === "ai" ? "AI" : "Determination"}</span>
+              <span className="badge source">{result.generated_by === "ai" ? "AI" : "Sistem"}</span>
             )}
             <span className="meta-date">{new Date(result.generated_at).toLocaleString("tr-TR")}</span>
             {typeof c.estimated_minutes === "number" && (
               <span className="meta-date">~{c.estimated_minutes} dk</span>
             )}
+            {str(c.difficulty_label) && (
+              <span className="badge diff">{str(c.difficulty_label)}</span>
+            )}
           </div>
 
-          <h2 className="lesson-title">{str(c.title) || node.title}</h2>
-
-          {arr(c.module_path).length > 0 && (
-            <div className="content-path">
-              {arr<string>(c.module_path).map((p, i) => (
-                <span key={i}>{p}{i < arr(c.module_path).length - 1 ? " › " : ""}</span>
-              ))}
-            </div>
-          )}
-
-          {arr(c.tags).length > 0 && (
+          {arr<string>(c.tags).length > 0 && (
             <div className="tag-row">
               {arr<string>(c.tags).map((t, i) => <span key={i} className="tag">{t}</span>)}
             </div>
           )}
 
           <nav className="lesson-tabs">
-            {tabs.map((t) => (
+            {TABS.map((t) => (
               <button
                 key={t.id}
                 className={`tab ${activeTab === t.id ? "active" : ""}`}
                 onClick={() => setActiveTab(t.id)}
               >
-                {t.label}
+                <span className="tab-icon">{t.icon}</span>
+                <span className="tab-label">{t.label}</span>
               </button>
             ))}
           </nav>
 
           <div className="lesson-content">
-            {activeTab === "overview" && <OverviewTab c={c} />}
             {activeTab === "content" && <ContentTab c={c} />}
-            {activeTab === "process" && <ProcessTab c={c} />}
-            {activeTab === "examples" && <ExamplesTab c={c} />}
-            {activeTab === "practice" && <PracticeTab c={c} />}
-            {activeTab === "reference" && <ReferenceTab c={c} />}
+            {activeTab === "visuals" && <VisualsTab c={c} />}
+            {activeTab === "quiz" && <QuizTab c={c} />}
+            {activeTab === "flashcards" && <FlashcardsTab c={c} />}
+            {activeTab === "notes" && <NotesTab node={node} />}
+            {activeTab === "related" && <RelatedTab c={c} onNavigate={onNavigate} />}
+            {activeTab === "ask" && <AskTab node={node} />}
           </div>
         </div>
       )}
@@ -157,318 +172,556 @@ export function LessonView({ node }: { node: ContentNode }) {
   );
 }
 
-function Block({ title, children }: { title: string; children: React.ReactNode }) {
+// ---- Section helpers ----
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="block">
-      <h3 className="block-title">{title}</h3>
-      <div className="block-body">{children}</div>
+    <div className="section">
+      <h3 className="section-title">{title}</h3>
+      <div className="section-body">{children}</div>
     </div>
   );
 }
 
-function OverviewTab({ c }: { c: Record<string, unknown> }) {
+function Paragraphs({ items }: { items: unknown }) {
+  const ps = arr<string>(items);
+  if (ps.length === 0) return null;
+  return <>{ps.map((p, i) => <p key={i} className="lesson-p">{p}</p>)}</>;
+}
+
+function DataTable({ data }: { data: Record<string, unknown> }) {
+  const headers = arr<string>(data.headers);
+  const rows = arr<unknown[]>(data.rows);
+  if (headers.length === 0 || rows.length === 0) return null;
   return (
-    <>
-      {str(c.introduction) && <Block title="Giriş"><p>{str(c.introduction)}</p></Block>}
-      {arr(c.learning_objectives).length > 0 && (
-        <Block title="Öğrenme Hedefleri">
-          <ul>{arr<string>(c.learning_objectives).map((o, i) => <li key={i}>{o}</li>)}</ul>
-        </Block>
-      )}
-      {str(c.why_it_matters) && <Block title="Bu Konu Neden Önemli?"><p>{str(c.why_it_matters)}</p></Block>}
-      {str(c.summary) && <Block title="Özet"><p>{str(c.summary)}</p></Block>}
-      {arr(c.key_takeaways).length > 0 && (
-        <Block title="Anahtar Noktalar">
-          <ul>{arr<string>(c.key_takeaways).map((k, i) => <li key={i}>{k}</li>)}</ul>
-        </Block>
-      )}
-    </>
+    <table className="data-table">
+      <thead><tr>{headers.map((h, i) => <th key={i}>{h}</th>)}</tr></thead>
+      <tbody>
+        {rows.map((row, i) => (
+          <tr key={i}>{arr<string>(row).map((cell, j) => <td key={j}>{cell}</td>)}</tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
+// ---- Tab: Konu Anlatımı ----
 function ContentTab({ c }: { c: Record<string, unknown> }) {
-  const comparison = obj(c.comparison_table);
-  return (
-    <>
-      {str(c.full_explanation) && <Block title="Tam Ders Açıklaması"><p className="long-text">{str(c.full_explanation)}</p></Block>}
-      {str(c.historical_background) && <Block title="Tarihsel Arka Plan"><p className="long-text">{str(c.historical_background)}</p></Block>}
-      {str(c.technical_explanation) && <Block title="Teknik ve Bilimsel Açıklama"><p className="long-text">{str(c.technical_explanation)}</p></Block>}
-      {arr(comparison.headers).length > 0 && (
-        <Block title="Karşılaştırma Tablosu">
-          <table className="data-table">
-            <thead>
-              <tr>{arr<string>(comparison.headers).map((h, i) => <th key={i}>{h}</th>)}</tr>
-            </thead>
-            <tbody>
-              {arr<unknown[]>(comparison.rows).map((row, i) => (
-                <tr key={i}>{arr<string>(row).map((cell, j) => <td key={j}>{cell}</td>)}</tr>
-              ))}
-            </tbody>
-          </table>
-        </Block>
-      )}
-    </>
-  );
-}
+  const summary = obj(c.summary);
+  const detailed = obj(c.detailed_explanation);
+  const scientific = obj(c.scientific_explanation);
+  const tables = obj(c.tables);
+  const lessonSummary = obj(c.lesson_summary);
 
-function ProcessTab({ c }: { c: Record<string, unknown> }) {
-  const process = arr<Record<string, unknown>>(c.production_process);
-  const properties = arr<Record<string, unknown>>(c.properties);
   return (
-    <>
-      {process.length > 0 && (
-        <Block title="Üretim / Üygulama Süreci">
-          <ol className="process-list">
-            {process.map((s, i) => (
-              <li key={i}>
-                <div className="process-step">
-                  <span className="step-num">{Number(s.step) || i + 1}</span>
-                  <div>
-                    <div className="step-title">{str(s.title)}</div>
-                    <div className="step-desc">{str(s.description)}</div>
-                  </div>
+    <div className="tab-content">
+      {/* Ders Özeti */}
+      <Section title="Dersin Özeti">
+        {str(summary.description) && <p className="lesson-p">{str(summary.description)}</p>}
+        {str(summary.one_liner) && <p className="lesson-lead">{str(summary.one_liner)}</p>}
+        {arr<string>(summary.key_points).length > 0 && (
+          <ul className="key-points">
+            {arr<string>(summary.key_points).map((k, i) => <li key={i}>{k}</li>)}
+          </ul>
+        )}
+      </Section>
+
+      {/* Öğrenme Hedefleri */}
+      <Section title="Öğrenme Hedefleri">
+        <ol className="objectives">
+          {arr<string>(c.learning_objectives).map((o, i) => <li key={i}>{o}</li>)}
+        </ol>
+      </Section>
+
+      {/* Detaylı Anlatım */}
+      {arr<string>(detailed).length > 0 || obj(detailed.introduction).heading ? (
+        <Section title="Detaylı Anlatım">
+          {["introduction", "definition", "classification", "importance"].map((key) => {
+            const part = obj(detailed[key]);
+            if (!str(part.heading)) return null;
+            return (
+              <div key={key} className="sub-section">
+                <h4 className="sub-title">{str(part.heading)}</h4>
+                <Paragraphs items={part.paragraphs} />
+                {arr<string>(part.items).length > 0 && (
+                  <ul className="item-list">
+                    {arr<string>(part.items).map((it, i) => <li key={i}>{it}</li>)}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
+        </Section>
+      ) : null}
+
+      {/* Bilimsel Açıklamalar */}
+      {str(scientific.heading) && (
+        <Section title="Bilimsel Açıklamalar">
+          <Paragraphs items={scientific.paragraphs} />
+          {arr<Record<string, unknown>>(scientific.formulas).length > 0 && (
+            <div className="formula-list">
+              {arr<Record<string, unknown>>(scientific.formulas).map((f, i) => (
+                <div key={i} className="formula-row">
+                  <code className="formula">{str(f.formula)}</code>
+                  <span className="formula-desc">{str(f.description)}</span>
                 </div>
-              </li>
-            ))}
-          </ol>
-        </Block>
-      )}
-      {properties.length > 0 && (
-        <Block title="Özellikler">
-          <table className="data-table">
-            <thead><tr><th>Özellik</th><th>Değer</th><th>Not</th></tr></thead>
-            <tbody>
-              {properties.map((p, i) => (
-                <tr key={i}>
-                  <td>{str(p.property)}</td>
-                  <td>{str(p.value)}</td>
-                  <td>{str(p.note)}</td>
-                </tr>
               ))}
-            </tbody>
-          </table>
-        </Block>
+            </div>
+          )}
+          {arr<Record<string, unknown>>(scientific.parameters).length > 0 && (
+            <table className="data-table">
+              <thead><tr><th>Parametre</th><th>Birim</th><th>Tipik Değer</th></tr></thead>
+              <tbody>
+                {arr<Record<string, unknown>>(scientific.parameters).map((p, i) => (
+                  <tr key={i}>
+                    <td>{str(p.name)}</td>
+                    <td>{str(p.unit)}</td>
+                    <td>{str(p.typical)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Section>
       )}
-      <div className="two-col">
-        {arr<string>(c.advantages).length > 0 && (
-          <Block title="Avantajlar">
-            <ul>{arr<string>(c.advantages).map((a, i) => <li key={i} className="pro">{a}</li>)}</ul>
-          </Block>
-        )}
-        {arr<string>(c.disadvantages).length > 0 && (
-          <Block title="Dezavantajlar">
-            <ul>{arr<string>(c.disadvantages).map((d, i) => <li key={i} className="con">{d}</li>)}</ul>
-          </Block>
-        )}
-      </div>
-      {arr<Record<string, unknown>>(c.applications).length > 0 && (
-        <Block title="Uygulama Alanları">
-          <ul>{arr<Record<string, unknown>>(c.applications).map((a, i) => (
-            <li key={i}><strong>{str(a.sector)}</strong> — {str(a.use)}</li>
-          ))}</ul>
-        </Block>
+
+      {/* Örnekler */}
+      {arr<Record<string, unknown>>(c.examples).length > 0 && (
+        <Section title="Örnekler">
+          <div className="example-grid">
+            {arr<Record<string, unknown>>(c.examples).map((e, i) => (
+              <div key={i} className="example-card">
+                <h4 className="example-title">{str(e.title)}</h4>
+                <div className="example-row"><span className="example-label">Senaryo:</span> {str(e.scenario)}</div>
+                <div className="example-row"><span className="example-label">Detay:</span> {str(e.details)}</div>
+                <div className="example-row"><span className="example-label">Sonuç:</span> {str(e.outcome)}</div>
+              </div>
+            ))}
+          </div>
+        </Section>
       )}
-    </>
+
+      {/* Tablolar */}
+      {arr<string>(obj(tables.properties).headers).length > 0 && (
+        <Section title="Tablolar">
+          {["properties", "comparison", "pros_cons"].map((key) => {
+            const t = obj(tables[key]);
+            if (!str(t.title) || arr<string>(t.headers).length === 0) return null;
+            return (
+              <div key={key} className="table-block">
+                <h4 className="table-caption">{str(t.title)}</h4>
+                <DataTable data={t} />
+              </div>
+            );
+          })}
+        </Section>
+      )}
+
+      {/* İlgili Makineler */}
+      {arr<Record<string, unknown>>(c.related_machines).length > 0 && (
+        <Section title="İlgili Makineler">
+          <div className="machine-grid">
+            {arr<Record<string, unknown>>(c.related_machines).map((m, i) => (
+              <div key={i} className="machine-card">
+                <h4>{str(m.name)}</h4>
+                <p className="machine-func">{str(m.function)}</p>
+                {arr<string>(m.specs).length > 0 && (
+                  <ul className="spec-list">
+                    {arr<string>(m.specs).map((s, j) => <li key={j}>{s}</li>)}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* İlgili Malzemeler */}
+      {arr<Record<string, unknown>>(c.related_materials).length > 0 && (
+        <Section title="İlgili Malzemeler">
+          <div className="material-list">
+            {arr<Record<string, unknown>>(c.related_materials).map((m, i) => (
+              <div key={i} className="material-item">
+                <div className="material-name">{str(m.name)}</div>
+                <div className="material-type">{str(m.type)}</div>
+                <div className="material-desc">{str(m.description)}</div>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* Özet */}
+      {arr<string>(lessonSummary.paragraphs).length > 0 && (
+        <Section title="Özet">
+          <Paragraphs items={lessonSummary.paragraphs} />
+          {arr<string>(lessonSummary.takeaways).length > 0 && (
+            <ul className="takeaways">
+              {arr<string>(lessonSummary.takeaways).map((t, i) => <li key={i} className="takeaway">{t}</li>)}
+            </ul>
+          )}
+        </Section>
+      )}
+
+      {/* Terimler Sözlüğü */}
+      {arr<Record<string, unknown>>(c.terminology).length > 0 && (
+        <Section title="Terimler Sözlüğü">
+          <dl className="glossary">
+            {arr<Record<string, unknown>>(c.terminology).map((t, i) => (
+              <div key={i} className="glossary-row">
+                <dt>{str(t.term)}</dt>
+                <dd>{str(t.definition)}</dd>
+              </div>
+            ))}
+          </dl>
+        </Section>
+      )}
+    </div>
   );
 }
 
-function ExamplesTab({ c }: { c: Record<string, unknown> }) {
+// ---- Tab: Görseller ve Diyagramlar ----
+function VisualsTab({ c }: { c: Record<string, unknown> }) {
+  const visuals = arr<Record<string, unknown>>(c.visual_diagrams);
+  if (visuals.length === 0) return <div className="tab-empty">Bu ders için görsel önerisi bulunmuyor.</div>;
   return (
-    <>
-      {arr<Record<string, unknown>>(c.real_world_examples).length > 0 && (
-        <Block title="Gerçek Dünya Örnekleri">
-          <ul>{arr<Record<string, unknown>>(c.real_world_examples).map((e, i) => (
-            <li key={i}><strong>{str(e.title)}</strong> — {str(e.description)}</li>
-          ))}</ul>
-        </Block>
-      )}
-      {arr<Record<string, unknown>>(c.case_studies).length > 0 && (
-        <Block title="Vaka Çalışmaları">
-          <div className="case-grid">
-            {arr<Record<string, unknown>>(c.case_studies).map((cs, i) => (
-              <div key={i} className="case-card">
-                <h4>{str(cs.title)}</h4>
-                <div className="case-row"><span className="case-label">Sorun:</span> {str(cs.problem)}</div>
-                <div className="case-row"><span className="case-label">Çözüm:</span> {str(cs.solution)}</div>
-                <div className="case-row"><span className="case-label">Sonuç:</span> {str(cs.result)}</div>
+    <div className="tab-content">
+      <Section title="Görsel ve Diyagram Önerileri">
+        <p className="lesson-p">Aşağıdaki görseller ve diyagramlar bu dersin konusunu desteklemek için önerilmiştir. Her diyagram, konunun daha iyi anlaşılması için tasarlanmıştır.</p>
+        <div className="visual-grid">
+          {visuals.map((v, i) => (
+            <div key={i} className="visual-card">
+              <div className="visual-placeholder">
+                <span className="visual-icon">
+                  {str(v.layout) === "vertical-flow" ? "↓" :
+                   str(v.layout) === "cross-section" ? "⬛" :
+                   str(v.layout) === "line-chart" ? "📈" :
+                   str(v.layout) === "comparison-table" ? "⊞" : "📊"}
+                </span>
+                <span className="visual-type-tag">{str(v.type)}</span>
               </div>
-            ))}
-          </div>
-        </Block>
-      )}
-      {arr<Record<string, unknown>>(c.visual_suggestions).length > 0 && (
-        <Block title="Görsel Önerileri">
-          <div className="visual-grid">
-            {arr<Record<string, unknown>>(c.visual_suggestions).map((v, i) => (
-              <div key={i} className="visual-card">
-                <span className="visual-type">{str(v.type)}</span>
-                <div className="visual-title">{str(v.title)}</div>
-                <div className="visual-desc">{str(v.description)}</div>
-              </div>
-            ))}
-          </div>
-        </Block>
-      )}
-      {arr<Record<string, unknown>>(c.templates).length > 0 && (
-        <Block title="Şablonlar ve Çek Listeleri">
-          <div className="template-list">
-            {arr<Record<string, unknown>>(c.templates).map((t, i) => (
-              <div key={i} className="template-card">
-                <span className="template-type">{str(t.type)}</span>
-                <div className="template-title">{str(t.title)}</div>
-                {arr<string>(t.items).length > 0 && (
-                  <ul>{arr<string>(t.items).map((it, j) => <li key={j}>{it}</li>)}</ul>
-                )}
-                {arr<string>(t.steps).length > 0 && (
-                  <ol>{arr<string>(t.steps).map((s, j) => <li key={j}>{s}</li>)}</ol>
-                )}
-                {arr<string>(t.fields).length > 0 && (
-                  <div className="field-row">{arr<string>(t.fields).map((f, j) => <span key={j} className="field-chip">{f}</span>)}</div>
-                )}
-              </div>
-            ))}
-          </div>
-        </Block>
-      )}
-    </>
+              <h4 className="visual-title">{str(v.title)}</h4>
+              <p className="visual-desc">{str(v.description)}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
+    </div>
   );
 }
 
-function PracticeTab({ c }: { c: Record<string, unknown> }) {
+// ---- Tab: Quiz ----
+function QuizTab({ c }: { c: Record<string, unknown> }) {
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [showResults, setShowResults] = useState(false);
   const quiz = arr<Record<string, unknown>>(c.mini_quiz);
 
+  if (quiz.length === 0) return <div className="tab-empty">Bu ders için quiz bulunmuyor.</div>;
+
+  const score = Object.entries(answers).filter(
+    ([idx, ans]) => ans === Number(quiz[Number(idx)].correct_index),
+  ).length;
+
   return (
-    <>
-      {arr<string>(c.practice_questions).length > 0 && (
-        <Block title="Pratik Sorular">
-          <ol>{arr<string>(c.practice_questions).map((q, i) => <li key={i}>{q}</li>)}</ol>
-        </Block>
-      )}
-      {quiz.length > 0 && (
-        <Block title="Mini Quiz">
-          {showResults && (
-            <div className="quiz-score">
-              Sonuç: {Object.entries(answers).filter(([idx, ans]) => ans === quiz[Number(idx)].correct_index).length} / {quiz.length}
-            </div>
-          )}
-          <ol className="quiz-list">
-            {quiz.map((q, i) => (
-              <li key={i} className="quiz-q">
-                <div className="quiz-question">{str(q.question)}</div>
-                <ul className="quiz-opts">
-                  {arr<string>(q.options).map((opt, j) => {
-                    const selected = answers[i] === j;
-                    const correct = Number(q.correct_index) === j;
-                    let cls = "";
-                    if (showResults) {
-                      if (correct) cls = "correct";
-                      else if (selected) cls = "wrong";
-                    } else if (selected) cls = "selected";
-                    return (
-                      <li key={j} className={cls} onClick={() => !showResults && setAnswers({ ...answers, [i]: j })}>
-                        {String.fromCharCode(65 + j)}. {opt}
-                      </li>
-                    );
-                  })}
-                </ul>
-                {showResults && str(q.explanation) && (
-                  <div className="quiz-expl"><em>Açıklama:</em> {str(q.explanation)}</div>
-                )}
-              </li>
-            ))}
-          </ol>
-          <button className="btn-engine" onClick={() => setShowResults(!showResults)}>
-            {showResults ? "Cevapları Gizle" : "Cevapları Göster"}
-          </button>
-        </Block>
-      )}
-      {arr<Record<string, unknown>>(c.flashcards).length > 0 && (
-        <Block title="Flash Kartlar">
-          <div className="cards-grid">
-            {arr<Record<string, unknown>>(c.flashcards).map((card, i) => (
-              <div key={i} className="flashcard">
-                <div className="flash-front">{str(card.front)}</div>
-                <div className="flash-back">{str(card.back)}</div>
-              </div>
-            ))}
+    <div className="tab-content">
+      <Section title="Mini Quiz">
+        {showResults && (
+          <div className="quiz-result">
+            Sonucun: <strong>{score}</strong> / {quiz.length}
+            {score === quiz.length ? " — Mükemmel!" : score >= quiz.length * 0.7 ? " — İyi!" : " — Tekrar etmen önerilir."}
           </div>
-        </Block>
-      )}
-    </>
+        )}
+        <ol className="quiz-list">
+          {quiz.map((q, i) => (
+            <li key={i} className="quiz-q">
+              <div className="quiz-question">{str(q.question)}</div>
+              <ul className="quiz-opts">
+                {arr<string>(q.options).map((opt, j) => {
+                  const selected = answers[i] === j;
+                  const correct = Number(q.correct_index) === j;
+                  let cls = "";
+                  if (showResults) {
+                    if (correct) cls = "correct";
+                    else if (selected) cls = "wrong";
+                  } else if (selected) cls = "selected";
+                  return (
+                    <li
+                      key={j}
+                      className={cls}
+                      onClick={() => !showResults && setAnswers({ ...answers, [i]: j })}
+                    >
+                      <span className="opt-letter">{String.fromCharCode(65 + j)}</span>
+                      <span className="opt-text">{opt}</span>
+                      {showResults && correct && <span className="opt-mark">✓</span>}
+                      {showResults && selected && !correct && <span className="opt-mark">✗</span>}
+                    </li>
+                  );
+                })}
+              </ul>
+              {showResults && str(q.explanation) && (
+                <div className="quiz-expl"><strong>Açıklama:</strong> {str(q.explanation)}</div>
+              )}
+            </li>
+          ))}
+        </ol>
+        <div className="quiz-actions">
+          <button className="btn-engine" onClick={() => setShowResults(!showResults)}>
+            {showResults ? "Cevapları Gizle" : "Cevapları Kontrol Et"}
+          </button>
+          {showResults && (
+            <button className="btn-engine ghost" onClick={() => { setAnswers({}); setShowResults(false); }}>
+              ↻ Tekrar Dene
+            </button>
+          )}
+        </div>
+      </Section>
+    </div>
   );
 }
 
-function ReferenceTab({ c }: { c: Record<string, unknown> }) {
+// ---- Tab: Flash Kartlar ----
+function FlashcardsTab({ c }: { c: Record<string, unknown> }) {
+  const [flipped, setFlipped] = useState<Record<number, boolean>>({});
+  const cards = arr<Record<string, unknown>>(c.flashcards);
+
+  if (cards.length === 0) return <div className="tab-empty">Bu ders için flash kart bulunmuyor.</div>;
+
   return (
-    <>
-      {arr<Record<string, unknown>>(c.terminology).length > 0 && (
-        <Block title="Terimler ve Tanımlar">
-          <dl>{arr<Record<string, unknown>>(c.terminology).map((t, i) => (
-            <div key={i} className="term-row"><dt>{str(t.term)}</dt><dd>{str(t.definition)}</dd></div>
-          ))}</dl>
-        </Block>
-      )}
-      {arr<Record<string, unknown>>(c.common_mistakes).length > 0 && (
-        <Block title="Yaygın Hatalar">
-          <ul>{arr<Record<string, unknown>>(c.common_mistakes).map((m, i) => (
-            <li key={i}><strong>✗ {str(m.mistake)}</strong><br /><span className="correction">✓ {str(m.correction)}</span></li>
-          ))}</ul>
-        </Block>
-      )}
-      {arr<string>(c.best_practices).length > 0 && (
-        <Block title="En İyi Uygulamalar">
-          <ul>{arr<string>(c.best_practices).map((b, i) => <li key={i} className="pro">{b}</li>)}</ul>
-        </Block>
-      )}
-      {arr<Record<string, unknown>>(c.faqs).length > 0 && (
-        <Block title="Sıkça Sorulan Sorular">
-          <div className="faq-list">
-            {arr<Record<string, unknown>>(c.faqs).map((f, i) => (
-              <div key={i} className="faq-item">
-                <div className="faq-q">Q: {str(f.q)}</div>
-                <div className="faq-a">A: {str(f.a)}</div>
+    <div className="tab-content">
+      <Section title="Flash Kartlar">
+        <p className="lesson-p">Kartlara tıklayarak cevapları görebilirsin. Hızlı tekrar için idealdir.</p>
+        <div className="flashcards-grid">
+          {cards.map((card, i) => (
+            <div
+              key={i}
+              className={`flashcard ${flipped[i] ? "flipped" : ""}`}
+              onClick={() => setFlipped({ ...flipped, [i]: !flipped[i] })}
+            >
+              <div className="flashcard-inner">
+                <div className="flashcard-front">
+                  <span className="flashcard-label">Soru</span>
+                  <div className="flashcard-text">{str(card.front)}</div>
+                  <span className="flashcard-hint">Cevap için tıkla</span>
+                </div>
+                <div className="flashcard-back">
+                  <span className="flashcard-label">Cevap</span>
+                  <div className="flashcard-text">{str(card.back)}</div>
+                  <span className="flashcard-hint">Geri çevirmek için tıkla</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+    </div>
+  );
+}
+
+// ---- Tab: Notlar ----
+function NotesTab({ node }: { node: ContentNode }) {
+  const [notes, setNotes] = useState<LessonNote[]>([]);
+  const [newNote, setNewNote] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchNotes(node.slug);
+      setNotes(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  }, [node.slug]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleSave = async () => {
+    if (!newNote.trim()) return;
+    try {
+      const saved = await saveNote(node.slug, newNote.trim());
+      setNotes([saved, ...notes]);
+      setNewNote("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteNote(id);
+      setNotes(notes.filter((n) => n.id !== id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  return (
+    <div className="tab-content">
+      <Section title="Ders Notların">
+        <p className="lesson-p">Bu derse kişisel notlarını ekle. Notların kaydedilir ve sonradan görüntüleyebilirsin.</p>
+        <div className="note-input">
+          <textarea
+            className="note-textarea"
+            placeholder="Notunu buraya yaz…"
+            value={newNote}
+            onChange={(e) => setNewNote(e.target.value)}
+            rows={4}
+          />
+          <button className="btn-engine" disabled={!newNote.trim()} onClick={handleSave}>Notu Kaydet</button>
+        </div>
+        {error && <div className="engine-error">{error}</div>}
+        {loading ? (
+          <div className="engine-loading">Notlar yükleniyor…</div>
+        ) : notes.length === 0 ? (
+          <div className="tab-empty">Henüz not eklenmedi. İlk notunu ekle!</div>
+        ) : (
+          <div className="notes-list">
+            {notes.map((n) => (
+              <div key={n.id} className="note-card">
+                <div className="note-text">{n.note}</div>
+                <div className="note-meta">
+                  <span>{new Date(n.updated_at).toLocaleString("tr-TR")}</span>
+                  <button className="note-delete" onClick={() => handleDelete(n.id)}>Sil</button>
+                </div>
               </div>
             ))}
           </div>
-        </Block>
+        )}
+      </Section>
+    </div>
+  );
+}
+
+// ---- Tab: İlgili Konular ----
+function RelatedTab({ c, onNavigate }: { c: Record<string, unknown>; onNavigate: (slug: string) => void }) {
+  const related = arr<Record<string, unknown>>(c.related_topics);
+  const terminology = arr<Record<string, unknown>>(c.terminology);
+
+  if (related.length === 0 && terminology.length === 0) {
+    return <div className="tab-empty">Bu ders için ilgili konu bulunmuyor.</div>;
+  }
+
+  return (
+    <div className="tab-content">
+      {related.length > 0 && (
+        <Section title="İlgili Konular">
+          <div className="related-grid">
+            {related.map((r, i) => (
+              <button
+                key={i}
+                className="related-card"
+                onClick={() => onNavigate(str(r.slug))}
+              >
+                <div className="related-title">{str(r.title)}</div>
+                <div className="related-desc">{str(r.description)}</div>
+                <div className="related-relation">{str(r.relation)}</div>
+              </button>
+            ))}
+          </div>
+        </Section>
       )}
-      {arr<Record<string, unknown>>(c.related_materials).length > 0 && (
-        <Block title="İlgili Malzemeler">
-          <ul>{arr<Record<string, unknown>>(c.related_materials).map((m, i) => (
-            <li key={i}><strong>{str(m.title)}</strong> — {str(m.relation)}</li>
-          ))}</ul>
-        </Block>
+      {terminology.length > 0 && (
+        <Section title="Terimler Sözlüğü">
+          <dl className="glossary">
+            {terminology.map((t, i) => (
+              <div key={i} className="glossary-row">
+                <dt>{str(t.term)}</dt>
+                <dd>{str(t.definition)}</dd>
+              </div>
+            ))}
+          </dl>
+        </Section>
       )}
-      {arr<Record<string, unknown>>(c.related_machines).length > 0 && (
-        <Block title="İlgili Makineler">
-          <ul>{arr<Record<string, unknown>>(c.related_machines).map((m, i) => (
-            <li key={i}><strong>{str(m.name)}</strong> — {str(m.function)}</li>
-          ))}</ul>
-        </Block>
-      )}
-      {arr<Record<string, unknown>>(c.related_standards).length > 0 && (
-        <Block title="İlgili Standartlar">
-          <ul>{arr<Record<string, unknown>>(c.related_standards).map((s, i) => (
-            <li key={i}><strong>{str(s.code)}</strong> — {str(s.title)}</li>
-          ))}</ul>
-        </Block>
-      )}
-      {arr<Record<string, unknown>>(c.references).length > 0 && (
-        <Block title="Kaynaklar ve Daha Fazla Okuma">
-          <ul>{arr<Record<string, unknown>>(c.references).map((r, i) => (
-            <li key={i}>{str(r.title)} — {str(r.author)} ({str(r.year)})</li>
-          ))}</ul>
-        </Block>
-      )}
-      {arr<Record<string, unknown>>(c.related_lessons).length > 0 && (
-        <Block title="İlgili Dersler">
-          <ul>{arr<Record<string, unknown>>(c.related_lessons).map((l, i) => (
-            <li key={i}><strong>{str(l.title)}</strong> — {str(l.relation)}</li>
-          ))}</ul>
-        </Block>
-      )}
-    </>
+    </div>
+  );
+}
+
+// ---- Tab: AI'ya Soru Sor ----
+function AskTab({ node }: { node: ContentNode }) {
+  const [question, setQuestion] = useState("");
+  const [history, setHistory] = useState<{ q: string; a: string; loading?: boolean }[]>([]);
+  const ask = async () => {
+    if (!question.trim()) return;
+    const q = question.trim();
+    setHistory([...history, { q, a: "", loading: true }]);
+    setQuestion("");
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/full-lesson`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ slug: node.slug, difficulty: "intermediate", force: false }),
+      });
+      const data = await res.json();
+      const content = data?.content ?? {};
+      // Build an answer from the lesson content
+      const summary = content?.summary ?? {};
+      const terminology = content?.terminology ?? [];
+      const answer = [
+        `Bu ders "${content?.title ?? node.title}" konusunu işliyor.`,
+        summary?.description ?? "",
+        summary?.one_liner ?? "",
+        Array.isArray(terminology) && terminology.length > 0
+          ? `İlgili terimler: ${terminology.slice(0, 3).map((t: Record<string, unknown>) => t.term).join(", ")}`
+          : "",
+      ].filter(Boolean).join("\n\n");
+
+      setHistory((prev) => prev.map((h, i) => i === prev.length - 1 ? { q, a: answer } : h));
+    } catch {
+      setHistory((prev) => prev.map((h, i) =>
+        i === prev.length - 1 ? { q, a: "Şu anda cevap veremiyorum. Lütfen tekrar dene." } : h,
+      ));
+    }
+  };
+
+  const suggestedQuestions = [
+    `${node.title} nedir?`,
+    `${node.title} neden önemlidir?`,
+    `${node.title} hangi alanlarda kullanılır?`,
+    `${node.title} avantajları nelerdir?`,
+  ];
+
+  return (
+    <div className="tab-content">
+      <Section title="AI'ya Soru Sor">
+        <p className="lesson-p">Bu dersle ilgili soru sor. AI, ders içeriğine dayanarak cevaplar.</p>
+
+        <div className="suggested-questions">
+          {suggestedQuestions.map((q, i) => (
+            <button key={i} className="suggested-q" onClick={() => setQuestion(q)}>
+              {q}
+            </button>
+          ))}
+        </div>
+
+        <div className="ask-input">
+          <input
+            type="text"
+            className="ask-text"
+            placeholder="Sorunu buraya yaz…"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && ask()}
+          />
+          <button className="btn-engine" disabled={!question.trim()} onClick={ask}>Sor</button>
+        </div>
+
+        <div className="ask-history">
+          {history.map((h, i) => (
+            <div key={i} className="ask-item">
+              <div className="ask-q"><strong>Sen:</strong> {h.q}</div>
+              <div className="ask-a"><strong>AI:</strong> {h.loading ? "Düşünüyor…" : h.a}</div>
+            </div>
+          ))}
+        </div>
+      </Section>
+    </div>
   );
 }

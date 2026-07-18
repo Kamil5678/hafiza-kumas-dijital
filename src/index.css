@@ -45,26 +45,43 @@ body,
   padding: 40px 20px 64px;
 }
 
-.back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 14px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-  cursor: pointer;
-  transition: all 0.15s ease;
+.nav-bar {
+  display: flex;
+  gap: 8px;
   margin-bottom: 20px;
 }
 
-.back-btn:hover {
+.nav-btn {
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.nav-btn:hover:not(:disabled) {
   border-color: var(--primary);
   color: var(--primary);
   background: var(--primary-soft);
+}
+
+.nav-btn.home {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.nav-btn.home:hover {
+  background: var(--primary-hover);
+}
+
+.nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .header {
@@ -384,14 +401,6 @@ body,
   margin-top: 20px;
 }
 
-.actions-secondary {
-  margin-top: 10px;
-}
-
-.actions-secondary .action-btn {
-  width: 100%;
-}
-
 .action-btn {
   padding: 13px 14px;
   border-radius: var(--radius-md);
@@ -481,10 +490,18 @@ body,
   text-align: center;
 }
 
+.insufficient.success-card {
+  border-color: #c3e6cf;
+}
+
 .insufficient-icon {
   font-size: 36px;
   color: var(--warning);
   margin-bottom: 8px;
+}
+
+.insufficient-icon.success {
+  color: var(--success);
 }
 
 .insufficient h2 {

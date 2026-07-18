@@ -19,7 +19,7 @@ function packageName(category: string, size: number): string {
   const stamp = new Date().toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
-  year: "numeric",
+    year: "numeric",
   });
   return `${category} · ${size} topics · ${stamp}`;
 }

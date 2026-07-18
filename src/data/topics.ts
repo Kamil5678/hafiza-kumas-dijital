@@ -190,7 +190,7 @@ export const TOPICS: Topic[] = [
   { id: 180, title: "Bridal lingerie design", category: "Innerwear", tags: ["bridal", "lingerie"] },
   { id: 181, title: "Sleepwear and loungewear design", category: "Innerwear", tags: ["sleepwear", "loungewear"] },
   { id: 182, title: "Pajama construction and styling", category: "Innerwear", tags: ["pajama"] },
-  { id: 183, title: "Robe and kimono design for loungewear", category: "Innerwear", tags: ["robe", "kimono"] },
+  { id:183, title: "Robe and kimono design for loungewear", category: "Innerwear", tags: ["robe", "kimono"] },
   { id: 184, title: "Slip and camisole design", category: "Innerwear", tags: ["slip", "camisole"] },
   { id: 185, title: "Hosiery: sheer, opaque, and support tights", category: "Innerwear", tags: ["hosiery", "tights"] },
   { id: 186, title: "Sock construction: cushion, dress, athletic", category: "Innerwear", tags: ["socks"] },

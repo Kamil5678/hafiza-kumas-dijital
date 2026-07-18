@@ -1,113 +1,36 @@
 import { createClient } from "@supabase/supabase-js";
 
-const url = import.meta.env.VITE_SUPABASE_URL;
-const anon = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-export const supabase = createClient(url, anon, {
-  auth: { persistSession: false },
-});
+export const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY, { auth: { persistSession: false } });
 
 export type NodeType = "module" | "submodule" | "lesson" | "topic" | "subtopic";
-
 export type Difficulty = "beginner" | "intermediate" | "advanced";
 
 export interface ContentNode {
-  id: string;
-  parent_id: string | null;
-  type: NodeType;
-  title: string;
-  slug: string;
-  description: string | null;
-  position: number;
-  created_at: string;
-}
-
-export interface NodeWithMeta extends ContentNode {
-  module_root: string;
-  module_root_slug: string;
-  module_root_id: string;
+  id: string; parent_id: string | null; type: NodeType; title: string; slug: string;
+  description: string | null; position: number; created_at: string;
 }
 
 export async function fetchChildren(parentId: string | null): Promise<ContentNode[]> {
-  let query = supabase
-    .from("content_nodes")
-    .select("id, parent_id, type, title, slug, description, position, created_at")
-    .order("position", { ascending: true });
-  if (parentId === null) {
-    query = query.is("parent_id", null);
-  } else {
-    query = query.eq("parent_id", parentId);
-  }
-  const { data, error } = await query;
-  if (error) throw error;
-  return (data ?? []) as ContentNode[];
+  let q = supabase.from("content_nodes").select("id,parent_id,type,title,slug,description,position,created_at").order("position", { ascending: true });
+  q = parentId === null ? q.is("parent_id", null) : q.eq("parent_id", parentId);
+  const { data, error } = await q; if (error) throw error; return (data ?? []) as ContentNode[];
 }
-
 export async function fetchNode(id: string): Promise<ContentNode | null> {
-  const { data, error } = await supabase
-    .from("content_nodes")
-    .select("id, parent_id, type, title, slug, description, position, created_at")
-    .eq("id", id)
-    .maybeSingle();
-  if (error) throw error;
-  return data as ContentNode | null;
+  const { data, error } = await supabase.from("content_nodes").select("id,parent_id,type,title,slug,description,position,created_at").eq("id", id).maybeSingle();
+  if (error) throw error; return data as ContentNode | null;
 }
-
-export async function fetchNodeBySlug(slug: string): Promise<ContentNode | null> {
-  const { data, error } = await supabase
-    .from("content_nodes")
-    .select("id, parent_id, type, title, slug, description, position, created_at")
-    .eq("slug", slug)
-    .maybeSingle();
-  if (error) throw error;
-  return data as ContentNode | null;
-}
-
-export async function fetchRoots(): Promise<ContentNode[]> {
-  return fetchChildren(null);
-}
-
+export async function fetchRoots(): Promise<ContentNode[]> { return fetchChildren(null); }
 export async function fetchPath(id: string): Promise<ContentNode[]> {
-  const path: ContentNode[] = [];
-  let current: string | null = id;
-  while (current) {
-    const node = await fetchNode(current);
-    if (!node) break;
-    path.unshift(node);
-    current = node.parent_id;
-  }
+  const path: ContentNode[] = []; let cur: string | null = id;
+  while (cur) { const n = await fetchNode(cur); if (!n) break; path.unshift(n); cur = n.parent_id; }
   return path;
 }
-
 export async function countDescendants(nodeId: string): Promise<number> {
-  const { count, error } = await supabase
-    .from("content_nodes")
-    .select("id", { count: "exact", head: true })
-    .eq("parent_id", nodeId);
-  if (error) throw error;
-  return count ?? 0;
+  const { count, error } = await supabase.from("content_nodes").select("id", { count: "exact", head: true }).eq("parent_id", nodeId);
+  if (error) throw error; return count ?? 0;
 }
-
-// Siblings ordered by position — used for Previous/Next navigation
 export async function fetchSiblings(nodeId: string): Promise<ContentNode[]> {
-  const node = await fetchNode(nodeId);
-  if (!node || !node.parent_id) return [];
-  const { data, error } = await supabase
-    .from("content_nodes")
-    .select("id, parent_id, type, title, slug, description, position, created_at")
-    .eq("parent_id", node.parent_id)
-    .order("position", { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as ContentNode[];
-}
-
-// All lessons within the same module root — used for "Related Lessons"
-export async function fetchModuleLessons(rootId: string): Promise<ContentNode[]> {
-  const { data, error } = await supabase
-    .from("content_nodes")
-    .select("id, parent_id, type, title, slug, description, position, created_at")
-    .or(`parent_id.eq.${rootId}`)
-    .order("position", { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as ContentNode[];
+  const node = await fetchNode(nodeId); if (!node || !node.parent_id) return [];
+  const { data, error } = await supabase.from("content_nodes").select("id,parent_id,type,title,slug,description,position,created_at").eq("parent_id", node.parent_id).order("position", { ascending: true });
+  if (error) throw error; return (data ?? []) as ContentNode[];
 }

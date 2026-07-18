@@ -28,6 +28,7 @@ function CategoryPage() {
   const { entries } = useEntries();
   const [q, setQ] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [activeSub, setActiveSub] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
   const list = useMemo(() => entries.filter((e) => e.category === slug), [entries, slug]);
@@ -41,14 +42,15 @@ function CategoryPage() {
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
     return list.filter((e) => {
+      if (activeSub && e.subcategory !== activeSub) return false;
       if (activeTag && !e.keywords.includes(activeTag)) return false;
       if (!term) return true;
-      return [e.title, e.summary, e.reflection, e.keywords.join(" ")]
+      return [e.title, e.summary, e.detail ?? "", e.reflection, e.keywords.join(" ")]
         .join(" ")
         .toLowerCase()
         .includes(term);
     });
-  }, [list, q, activeTag]);
+  }, [list, q, activeTag, activeSub]);
 
   return (
     <div className="min-h-screen bg-background">

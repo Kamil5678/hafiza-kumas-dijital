@@ -22,6 +22,7 @@ export function EntryForm({
   onDone?: () => void;
 }) {
   const [category, setCategory] = useState<CategoryKey>(defaultCategory ?? "kumas");
+  const [subcategory, setSubcategory] = useState<string>("");
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [summary, setSummary] = useState("");
@@ -31,6 +32,9 @@ export function EntryForm({
   const [images, setImages] = useState<string[]>([]);
   const [status, setStatus] = useState<Status>("ogrenilecek");
   const [saving, setSaving] = useState(false);
+
+  const currentCat = CATEGORIES.find((c) => c.key === category);
+  const subs = currentCat?.subcategories ?? [];
 
 
   async function onFiles(files: FileList | null) {

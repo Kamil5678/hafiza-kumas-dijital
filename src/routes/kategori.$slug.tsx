@@ -103,6 +103,42 @@ function CategoryPage() {
           </span>
         </div>
 
+        {category.subcategories.length > 0 && (
+          <div className="mb-4 flex flex-wrap gap-1.5">
+            <button
+              onClick={() => setActiveSub(null)}
+              className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                activeSub === null
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border bg-background text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              Tüm alt başlıklar
+            </button>
+            {category.subcategories.map((s) => {
+              const count = list.filter((e) => e.subcategory === s).length;
+              return (
+                <button
+                  key={s}
+                  onClick={() => setActiveSub(activeSub === s ? null : s)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
+                    activeSub === s
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border bg-background text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {s}
+                  {count > 0 && (
+                    <span className="rounded-full bg-muted/60 px-1.5 text-[10px] text-muted-foreground">
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {tags.length > 0 && (
           <div className="mb-6 flex flex-wrap gap-1.5">
             <button

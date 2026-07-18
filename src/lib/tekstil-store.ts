@@ -298,3 +298,61 @@ export function daysAgo(iso: string): number {
   const now = Date.now();
   return Math.floor((now - a) / (1000 * 60 * 60 * 24));
 }
+
+// ================= PDF Kütüphanesi =================
+
+export type PdfDoc = {
+  id: string;
+  name: string;
+  size: number;
+  pageCount: number;
+  dataUrl: string; // orijinal PDF (data URL) — küçük dosyalar için
+  addedAt: number;
+};
+
+function readPdfs(): PdfDoc[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(PDFS_KEY);
+    return raw ? (JSON.parse(raw) as PdfDoc[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writePdfs(pdfs: PdfDoc[]) {
+  localStorage.setItem(PDFS_KEY, JSON.stringify(pdfs));
+  window.dispatchEvent(new Event("tekstil-hafizam:pdfs-change"));
+}
+
+export function usePdfs() {
+  const [pdfs, setPdfs] = useState<PdfDoc[]>([]);
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    setPdfs(readPdfs());
+    setHydrated(true);
+    const handler = () => setPdfs(readPdfs());
+    window.addEventListener("tekstil-hafizam:pdfs-change", handler);
+    window.addEventListener("storage", handler);
+    return () => {
+      window.removeEventListener("tekstil-hafizam:pdfs-change", handler);
+      window.removeEventListener("storage", handler);
+    };
+  }, []);
+  return { pdfs, hydrated };
+}
+
+export function addPdf(p: Omit<PdfDoc, "id" | "addedAt">) {
+  const all = readPdfs();
+  const np: PdfDoc = { ...p, id: crypto.randomUUID(), addedAt: Date.now() };
+  writePdfs([np, ...all]);
+  return np;
+}
+
+export function deletePdf(id: string) {
+  writePdfs(readPdfs().filter((p) => p.id !== id));
+}
+
+export function getPdf(id: string): PdfDoc | undefined {
+  return readPdfs().find((p) => p.id === id);
+}

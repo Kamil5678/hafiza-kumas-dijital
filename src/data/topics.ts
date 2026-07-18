@@ -8,7 +8,6 @@ export interface Topic {
 }
 
 export const TOPICS: Topic[] = [
-  // ---- Textile ----
   { id: 1, title: "Cotton fiber properties and spinning techniques", category: "Textile", tags: ["fiber", "cotton", "spinning"] },
   { id: 2, title: "Wool sourcing and worsted vs woolen yarns", category: "Textile", tags: ["wool", "yarn", "sourcing"] },
   { id: 3, title: "Silk sericulture and reeling processes", category: "Textile", tags: ["silk", "sericulture"] },
@@ -79,8 +78,6 @@ export const TOPICS: Topic[] = [
   { id: 68, title: "Felt and nonwoven wool production", category: "Textile", tags: ["felt", "nonwoven"] },
   { id: 69, title: "Textile composites for aerospace", category: "Textile", tags: ["composites", "aerospace"] },
   { id: 70, title: "Color matching and Pantone for textiles", category: "Textile", tags: ["color", "Pantone"] },
-
-  // ---- Fashion ----
   { id: 71, title: "Fashion trend forecasting and WGSN", category: "Fashion", tags: ["trend", "forecasting"] },
   { id: 72, title: "Seasonal fashion calendar: SS vs FW collections", category: "Fashion", tags: ["calendar", "seasons"] },
   { id: 73, title: "Fast fashion vs slow fashion business models", category: "Fashion", tags: ["business", "fast fashion"] },
@@ -151,8 +148,6 @@ export const TOPICS: Topic[] = [
   { id: 138, title: "Fashion color theory and seasonal palettes", category: "Fashion", tags: ["color", "theory"] },
   { id: 139, title: "Fashion fabric sourcing and sourcing trips", category: "Fashion", tags: ["sourcing", "fabric"] },
   { id: 140, title: "Fashion production planning and lead times", category: "Fashion", tags: ["production", "planning"] },
-
-  // ---- Innerwear ----
   { id: 141, title: "Bra sizing systems and fit measurement", category: "Innerwear", tags: ["bra", "sizing"] },
   { id: 142, title: "Bra cup construction and seaming techniques", category: "Innerwear", tags: ["bra", "construction"] },
   { id: 143, title: "Underwire vs wireless bra design", category: "Innerwear", tags: ["bra", "underwire"] },

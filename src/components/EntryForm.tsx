@@ -99,8 +99,14 @@ export function EntryForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>Kategori</Label>
-          <Select value={category} onValueChange={(v) => setCategory(v as CategoryKey)}>
+          <Label>Ana Kategori</Label>
+          <Select
+            value={category}
+            onValueChange={(v) => {
+              setCategory(v as CategoryKey);
+              setSubcategory("");
+            }}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -129,6 +135,28 @@ export function EntryForm({
           </Select>
         </div>
       </div>
+
+      {subs.length > 0 && (
+        <div className="space-y-2">
+          <Label>Alt Kategori (opsiyonel)</Label>
+          <Select
+            value={subcategory || "__none__"}
+            onValueChange={(v) => setSubcategory(v === "__none__" ? "" : v)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Alt kategori seç…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">— seçme —</SelectItem>
+              {subs.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
 
       <div className="space-y-2">

@@ -126,6 +126,7 @@ export const STATUSES: { key: Status; label: string; dot: string }[] = [
 export type Entry = {
   id: string;
   category: CategoryKey;
+  subcategory?: string; // alt kategori (opsiyonel)
   title: string;
   date: string; // ISO date
   summary: string; // 3 sentences
@@ -145,7 +146,12 @@ function read(): Entry[] {
   try {
     const raw = localStorage.getItem(KEY);
     const list = raw ? (JSON.parse(raw) as Entry[]) : [];
-    return list.map((e) => ({ ...e, status: e.status ?? "ogrenilecek", detail: e.detail ?? "" }));
+    return list.map((e) => ({
+      ...e,
+      status: e.status ?? "ogrenilecek",
+      detail: e.detail ?? "",
+      subcategory: e.subcategory ?? undefined,
+    }));
   } catch {
     return [];
   }

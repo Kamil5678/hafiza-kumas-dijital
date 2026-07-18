@@ -13,7 +13,7 @@ interface GenStatus {
   currentTitle: string | null; progress: number; errors: string[];
 }
 
-/* ── Elisé cherry-bra SVG logo ── */
+/* ── Elisé cherry-bra SVG logo (high-contrast cream lines on dark cherry) ── */
 function EliseLogo({ size = 32 }: { size?: number }) {
   return (
     <svg
@@ -24,20 +24,23 @@ function EliseLogo({ size = 32 }: { size?: number }) {
       xmlns="http://www.w3.org/2000/svg"
       aria-label="Elisé"
     >
-      {/* stems */}
-      <path d="M50 28 C50 16, 62 8, 68 4" stroke="#EDE8E4" strokeWidth="4" strokeLinecap="round" fill="none" />
-      <path d="M50 28 C50 16, 38 8, 32 4" stroke="#EDE8E4" strokeWidth="4" strokeLinecap="round" fill="none" />
-      {/* leaf */}
-      <ellipse cx="68" cy="4" rx="7" ry="4" fill="#EDE8E4" transform="rotate(-20 68 4)" />
-      {/* left cherry body */}
-      <path d="M50 30 C42 30, 18 32, 18 54 C18 70, 30 78, 42 76 C50 74, 50 64, 50 60 Z" fill="#6B1020" />
-      {/* right cherry body */}
-      <path d="M50 30 C58 30, 82 32, 82 54 C82 70, 70 78, 58 76 C50 74, 50 64, 50 60 Z" fill="#6B1020" />
-      {/* outline / highlight between cherries */}
-      <path d="M50 30 C50 30, 50 44, 50 60" stroke="#EDE8E4" strokeWidth="3" strokeLinecap="round" />
-      {/* outer rim highlight */}
-      <path d="M50 30 C42 30, 18 32, 18 54 C18 70, 30 78, 42 76 C50 74, 50 64, 50 60" stroke="#EDE8E4" strokeWidth="2.5" fill="none" opacity="0.6" />
-      <path d="M50 30 C58 30, 82 32, 82 54 C82 70, 70 78, 58 76 C50 74, 50 64, 50 60" stroke="#EDE8E4" strokeWidth="2.5" fill="none" opacity="0.6" />
+      {/* stems — cream, thick, rounded */}
+      <path d="M50 30 C50 18, 62 10, 70 6" stroke="#EDE8E4" strokeWidth="5" strokeLinecap="round" fill="none" />
+      <path d="M50 30 C50 18, 38 10, 30 6" stroke="#EDE8E4" strokeWidth="5" strokeLinecap="round" fill="none" />
+      {/* leaf — cream */}
+      <ellipse cx="70" cy="6" rx="8" ry="4.5" fill="#EDE8E4" transform="rotate(-18 70 6)" />
+      {/* left cherry body — dark cherry */}
+      <path d="M50 32 C40 32, 14 34, 14 56 C14 74, 28 84, 42 82 C50 80, 50 68, 50 62 Z" fill="#6B1020" />
+      {/* right cherry body — dark cherry */}
+      <path d="M50 32 C60 32, 86 34, 86 56 C86 74, 72 84, 58 82 C50 80, 50 68, 50 62 Z" fill="#6B1020" />
+      {/* cream outlines on cherry bodies for contrast */}
+      <path d="M50 32 C40 32, 14 34, 14 56 C14 74, 28 84, 42 82 C50 80, 50 68, 50 62" stroke="#EDE8E4" strokeWidth="3" fill="none" strokeLinejoin="round" />
+      <path d="M50 32 C60 32, 86 34, 86 56 C86 74, 72 84, 58 82 C50 80, 50 68, 50 62" stroke="#EDE8E4" strokeWidth="3" fill="none" strokeLinejoin="round" />
+      {/* center seam between cherries — cream */}
+      <path d="M50 32 C50 32, 50 48, 50 62" stroke="#EDE8E4" strokeWidth="3.5" strokeLinecap="round" />
+      {/* small highlight dots for depth */}
+      <circle cx="28" cy="50" r="3" fill="#EDE8E4" opacity="0.35" />
+      <circle cx="72" cy="50" r="3" fill="#EDE8E4" opacity="0.35" />
     </svg>
   );
 }

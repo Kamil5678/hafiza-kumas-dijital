@@ -1,35 +1,52 @@
-import { supabase, type Difficulty } from "./supabase";
+import { supabase } from "./supabase";
 
-export interface LessonResult { cached: boolean; generated_at: string; generated_by?: string; content: Record<string, unknown>; }
-const FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/full-lesson`;
+const EDGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/full-lesson`;
 
-export async function generateLesson(params: { slug: string; difficulty?: Difficulty; force?: boolean; use_ai?: boolean }): Promise<LessonResult> {
-  const res = await fetch(FUNCTION_URL, {
+export async function generateLesson(slug: string, difficulty = "intermediate", force = false): Promise<any> {
+  const res = await fetch(EDGE_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`, apikey: import.meta.env.VITE_SUPABASE_ANON_KEY },
-    body: JSON.stringify({ slug: params.slug, difficulty: params.difficulty ?? "intermediate", force: params.force ?? false, use_ai: params.use_ai ?? true }),
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({ slug, difficulty, force }),
   });
-  const text = await res.text(); let json: unknown;
-  try { json = JSON.parse(text); } catch { throw new Error(`Geçersiz yanıt (HTTP ${res.status})`); }
-  if (!res.ok) { const e = json as { error?: string }; throw new Error(e?.error ?? `HTTP ${res.status}`); }
-  return json as LessonResult;
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "İçerik üretilemedi");
+  }
+  const data = await res.json();
+  return data.content;
 }
 
-export async function fetchCachedLesson(slug: string, difficulty: Difficulty): Promise<LessonResult | null> {
-  const { data, error } = await supabase.from("generated_content").select("payload, updated_at").eq("node_slug", slug).eq("content_type", "full_lesson").eq("difficulty", difficulty).maybeSingle();
-  if (error) throw error; if (!data) return null;
-  return { cached: true, generated_at: data.updated_at, content: data.payload as Record<string, unknown> };
+export async function fetchNotes(slug: string): Promise<string> {
+  const { data } = await supabase
+    .from("lesson_notes")
+    .select("note")
+    .eq("node_slug", slug)
+    .order("updated_at", { ascending: false })
+    .limit(1);
+  return data && data.length > 0 ? data[0].note : "";
 }
 
-export interface LessonNote { id: string; node_slug: string; note: string; updated_at: string; }
-export async function fetchNotes(slug: string): Promise<LessonNote[]> {
-  const { data, error } = await supabase.from("lesson_notes").select("id,node_slug,note,updated_at").eq("node_slug", slug).order("updated_at", { ascending: false });
-  if (error) throw error; return (data ?? []) as LessonNote[];
+export async function saveNote(slug: string, note: string): Promise<void> {
+  const { data: existing } = await supabase
+    .from("lesson_notes")
+    .select("id")
+    .eq("node_slug", slug)
+    .limit(1);
+
+  if (existing && existing.length > 0) {
+    await supabase
+      .from("lesson_notes")
+      .update({ note, updated_at: new Date().toISOString() })
+      .eq("id", existing[0].id);
+  } else {
+    await supabase.from("lesson_notes").insert({ node_slug: slug, note });
+  }
 }
-export async function saveNote(slug: string, note: string): Promise<LessonNote> {
-  const { data, error } = await supabase.from("lesson_notes").insert({ node_slug: slug, note }).select("id,node_slug,note,updated_at").single();
-  if (error) throw error; return data as LessonNote;
-}
-export async function deleteNote(id: string): Promise<void> {
-  const { error } = await supabase.from("lesson_notes").delete().eq("id", id); if (error) throw error;
+
+export async function deleteNote(slug: string): Promise<void> {
+  await supabase.from("lesson_notes").delete().eq("node_slug", slug);
 }

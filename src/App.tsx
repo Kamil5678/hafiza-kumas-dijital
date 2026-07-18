@@ -1,101 +1,400 @@
-import { useEffect, useState, useCallback } from "react";
-import { fetchRoots, fetchChildren, fetchPath, fetchSiblings, countDescendants, type ContentNode, type NodeType } from "./lib/supabase";
-import { LessonView, type LessonNav } from "./components/LessonView";
+import { useState, useEffect, useRef } from "react";
+import {
+  fetchRoots,
+  fetchChildren,
+  fetchNode,
+  fetchPath,
+  fetchAllLessons,
+  fetchCachedSlugs,
+  type ContentNode,
+} from "./lib/supabase";
+import { generateLesson } from "./lib/lesson";
+import LessonView from "./components/LessonView";
 
-const TYPE_LABEL: Record<NodeType, string> = { module: "Modül", submodule: "Alt Modül", lesson: "Ders", topic: "Konu", subtopic: "Alt Konu" };
-const TYPE_ORDER: NodeType[] = ["module", "submodule", "lesson", "topic", "subtopic"];
+type View =
+  | { name: "dashboard" }
+  | { name: "module"; slug: string }
+  | { name: "lesson"; slug: string };
 
-function Icon({ type }: { type: NodeType }) {
-  const c = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-  switch (type) {
-    case "module": return <svg {...c}><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>;
-    case "submodule": return <svg {...c}><path d="M3 7h18M3 12h18M3 17h18" /></svg>;
-    case "lesson": return <svg {...c}><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" /></svg>;
-    case "topic": return <svg {...c}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></svg>;
-    case "subtopic": return <svg {...c}><path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01" /></svg>;
-  }
+interface GenStatus {
+  total: number;
+  cached: number;
+  remaining: number;
+  generating: boolean;
+  current: string | null;
+  currentTitle: string | null;
+  progress: number;
+  errors: string[];
 }
 
-interface Crumb { id: string; title: string; slug: string; }
-
 export default function App() {
-  const [current, setCurrent] = useState<ContentNode | null>(null);
-  const [children, setChildren] = useState<ContentNode[]>([]);
-  const [crumbs, setCrumbs] = useState<Crumb[]>([]);
+  const [view, setView] = useState<View>({ name: "dashboard" });
+  const [roots, setRoots] = useState<ContentNode[]>([]);
+  const [moduleChildren, setModuleChildren] = useState<ContentNode[]>([]);
+  const [lessonNode, setLessonNode] = useState<ContentNode | null>(null);
   const [path, setPath] = useState<ContentNode[]>([]);
-  const [siblings, setSiblings] = useState<ContentNode[]>([]);
-  const [allNodes, setAllNodes] = useState<ContentNode[]>([]);
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [genStatus, setGenStatus] = useState<GenStatus>({
+    total: 0,
+    cached: 0,
+    remaining: 0,
+    generating: false,
+    current: null,
+    currentTitle: null,
+    progress: 0,
+    errors: [],
+  });
+  const [allLessons, setAllLessons] = useState<ContentNode[]>([]);
+  const genAbortRef = useRef(false);
 
-  const loadRoots = useCallback(async () => {
-    setLoading(true); setError(null);
-    try { const data = await fetchRoots(); setCurrent(null); setChildren(data); setCrumbs([]); setPath([]); setSiblings([]);
-      setAllNodes((p) => { const m = [...p]; for (const n of data) if (!m.find((x) => x.id === n.id)) m.push(n); return m; });
-      const c: Record<string, number> = {}; for (const n of data) c[n.id] = await countDescendants(n.id); setCounts(c);
-    } catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setLoading(false); }
+  // Load roots + generation status on mount
+  useEffect(() => {
+    (async () => {
+      const r = await fetchRoots();
+      setRoots(r);
+      await refreshGenStatus();
+    })();
   }, []);
 
-  const openNode = useCallback(async (node: ContentNode) => {
-    setLoading(true); setError(null);
-    try { const [kids, nodePath, sibs] = await Promise.all([fetchChildren(node.id), fetchPath(node.id), fetchSiblings(node.id)]);
-      setCurrent(node); setChildren(kids); setPath(nodePath); setSiblings(sibs); setCrumbs(nodePath.map((p) => ({ id: p.id, title: p.title, slug: p.slug })));
-      setAllNodes((p) => { const m = [...p]; for (const k of [...kids, ...sibs]) if (!m.find((x) => x.id === k.id)) m.push(k); return m; });
-      const c: Record<string, number> = {}; for (const n of kids) c[n.id] = await countDescendants(n.id); setCounts(c);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setLoading(false); }
-  }, []);
+  const refreshGenStatus = async () => {
+    const [lessons, cachedSlugs] = await Promise.all([fetchAllLessons(), fetchCachedSlugs()]);
+    setAllLessons(lessons);
+    const cachedCount = lessons.filter((l) => cachedSlugs.has(l.slug)).length;
+    setGenStatus((prev) => ({
+      ...prev,
+      total: lessons.length,
+      cached: cachedCount,
+      remaining: lessons.length - cachedCount,
+      progress: lessons.length > 0 ? Math.round((cachedCount / lessons.length) * 100) : 0,
+    }));
+  };
 
-  const navigateBySlug = useCallback((slug: string) => { const n = allNodes.find((x) => x.slug === slug); if (n) openNode(n); else loadRoots(); }, [allNodes, openNode, loadRoots]);
-  const goBackToModule = useCallback(() => { if (path.length >= 2) openNode(path[path.length - 2]); else loadRoots(); }, [path, openNode, loadRoots]);
-  const goHome = useCallback(() => loadRoots(), [loadRoots]);
+  // Generate all lessons sequentially
+  const handleGenerateAll = async () => {
+    if (genStatus.generating) return;
+    genAbortRef.current = false;
+    setGenStatus((prev) => ({ ...prev, generating: true, errors: [] }));
 
-  useEffect(() => { loadRoots(); }, [loadRoots]);
+    const cachedSlugs = await fetchCachedSlugs();
+    const toGenerate = allLessons.filter((l) => !cachedSlugs.has(l.slug));
+    let completed = genStatus.cached;
+    const errors: string[] = [];
 
-  const grouped: Record<string, ContentNode[]> = {};
-  for (const t of TYPE_ORDER) grouped[t] = [];
-  for (const c of children) grouped[c.type]?.push(c);
+    for (const lesson of toGenerate) {
+      if (genAbortRef.current) break;
+      setGenStatus((prev) => ({
+        ...prev,
+        current: lesson.slug,
+        currentTitle: lesson.title,
+      }));
+      try {
+        await generateLesson(lesson.slug, "intermediate", false);
+        completed++;
+      } catch (e: any) {
+        errors.push(`${lesson.title}: ${e.message}`);
+      }
+      setGenStatus((prev) => ({
+        ...prev,
+        cached: completed,
+        remaining: prev.total - completed,
+        progress: Math.round((completed / prev.total) * 100),
+        errors,
+      }));
+    }
 
-  const showLesson = current && (current.type === "lesson" || current.type === "topic" || current.type === "subtopic");
+    setGenStatus((prev) => ({
+      ...prev,
+      generating: false,
+      current: null,
+      currentTitle: null,
+    }));
+    await refreshGenStatus();
+  };
 
-  let lessonNav: LessonNav = { prev: null, next: null, parent: null, root: null };
-  if (showLesson && current) {
-    const idx = siblings.findIndex((s) => s.id === current!.id);
-    lessonNav = { prev: idx > 0 ? siblings[idx - 1] : null, next: idx >= 0 && idx < siblings.length - 1 ? siblings[idx + 1] : null, parent: path.length >= 2 ? path[path.length - 2] : null, root: path.length > 0 ? path[0] : null };
+  const handleStopGeneration = () => {
+    genAbortRef.current = true;
+  };
+
+  // Regenerate single lesson (admin)
+  const handleRegenerate = async (slug: string) => {
+    await generateLesson(slug, "intermediate", true);
+  };
+
+  // Navigation
+  const openModule = async (slug: string) => {
+    const node = await fetchNode(slug);
+    if (!node) return;
+    const children = await fetchChildren(node.id);
+    setModuleChildren(children);
+    const p = await fetchPath(slug);
+    setPath(p);
+    setView({ name: "module", slug });
+  };
+
+  const openLesson = async (slug: string) => {
+    const node = await fetchNode(slug);
+    if (!node) return;
+    setLessonNode(node);
+    const p = await fetchPath(slug);
+    setPath(p);
+    setView({ name: "lesson", slug });
+  };
+
+  const handleNavigate = (slug: string) => {
+    openLesson(slug);
+  };
+
+  const backToModule = () => {
+    if (path.length >= 2) {
+      const moduleNode = path[0];
+      openModule(moduleNode.slug);
+    } else {
+      setView({ name: "dashboard" });
+    }
+  };
+
+  const backToDashboard = () => {
+    setView({ name: "dashboard" });
+  };
+
+  // ─── Dashboard View ─────────────────────────────────────────
+  if (view.name === "dashboard") {
+    const allGenerated = genStatus.remaining === 0 && genStatus.total > 0;
+    return (
+      <div className="app">
+        <header className="app-header">
+          <div className="header-content">
+            <h1 className="app-title">Tekstil Bilgi İşletim Sistemi</h1>
+            <p className="app-subtitle">Merkezi AI İçerik Motoru</p>
+          </div>
+        </header>
+
+        <main className="main-content">
+          {/* Generation Status Panel */}
+          <div className={`gen-panel ${allGenerated ? "complete" : ""} ${genStatus.generating ? "active" : ""}`}>
+            <div className="gen-panel-header">
+              <h2>İçerik Üretim Durumu</h2>
+              <div className="gen-stats">
+                <span className="gen-stat">
+                  <strong>{genStatus.cached}</strong> / {genStatus.total} ders hazır
+                </span>
+              </div>
+            </div>
+
+            <div className="progress-bar-container">
+              <div className="progress-bar" style={{ width: `${genStatus.progress}%` }} />
+              <span className="progress-label">{genStatus.progress}%</span>
+            </div>
+
+            {genStatus.generating && (
+              <div className="gen-active-info">
+                <div className="spinner small" />
+                <p>
+                  Üretiliyor: <strong>{genStatus.currentTitle}</strong>
+                </p>
+                <span className="gen-remaining">Kalan: {genStatus.remaining} ders</span>
+              </div>
+            )}
+
+            {genStatus.errors.length > 0 && (
+              <div className="gen-errors">
+                <p>Hatalar ({genStatus.errors.length}):</p>
+                <ul>
+                  {genStatus.errors.slice(-5).map((e, i) => (
+                    <li key={i}>{e}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="gen-actions">
+              {!genStatus.generating && genStatus.remaining > 0 && (
+                <button className="btn btn-primary btn-large" onClick={handleGenerateAll}>
+                  {genStatus.cached > 0 ? `Üretmeye Devam Et (${genStatus.remaining} ders)` : `Tüm İçeriği Üret (${genStatus.total} ders)`}
+                </button>
+              )}
+              {genStatus.generating && (
+                <button className="btn btn-danger" onClick={handleStopGeneration}>
+                  Üretimi Durdur
+                </button>
+              )}
+              {allGenerated && !genStatus.generating && (
+                <div className="gen-complete-msg">
+                  <span className="check-icon">✓</span>
+                  <p>Tüm ders içerikleri hazır. Dersleri açtığınızda anında yüklenecektir.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Modules Grid */}
+          <div className="modules-section">
+            <h2 className="section-heading">Modüller</h2>
+            <div className="modules-grid">
+              {roots.map((m) => (
+                <button key={m.id} className="module-card" onClick={() => openModule(m.slug)}>
+                  <div className="module-card-icon">
+                    {moduleIcon(m.slug)}
+                  </div>
+                  <h3 className="module-card-title">{m.title}</h3>
+                  {m.description && <p className="module-card-desc">{m.description}</p>}
+                </button>
+              ))}
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // ─── Module View ─────────────────────────────────────────────
+  if (view.name === "module") {
+    return (
+      <div className="app">
+        <header className="app-header">
+          <div className="header-content">
+            <button className="btn btn-ghost back-btn" onClick={backToDashboard}>
+              ← Panele Dön
+            </button>
+            <nav className="breadcrumbs">
+              {path.map((n, i) => (
+                <span key={n.id} className="breadcrumb-item">
+                  {i > 0 && <span className="breadcrumb-sep">/</span>}
+                  {n.title}
+                </span>
+              ))}
+            </nav>
+          </div>
+        </header>
+
+        <main className="main-content">
+          <div className="module-header">
+            <h1 className="page-title">{path[0]?.title}</h1>
+            {path[0]?.description && <p className="page-desc">{path[0].description}</p>}
+          </div>
+
+          <NodeTree
+            nodes={moduleChildren}
+            level={0}
+            onOpenLesson={openLesson}
+            onOpenSubmodule={() => {}}
+          />
+        </main>
+      </div>
+    );
+  }
+
+  // ─── Lesson View ─────────────────────────────────────────────
+  if (view.name === "lesson" && lessonNode) {
+    return (
+      <div className="app">
+        <header className="app-header">
+          <div className="header-content">
+            <button className="btn btn-ghost back-btn" onClick={backToDashboard}>
+              ← Panele Dön
+            </button>
+            <nav className="breadcrumbs">
+              {path.map((n, i) => (
+                <span key={n.id} className="breadcrumb-item">
+                  {i > 0 && <span className="breadcrumb-sep">/</span>}
+                  {n.title}
+                </span>
+              ))}
+            </nav>
+          </div>
+        </header>
+
+        <main className="main-content">
+          <LessonView
+            node={lessonNode}
+            onNavigate={handleNavigate}
+            onBackToModule={backToModule}
+            onBackToDashboard={backToDashboard}
+            onRegenerate={handleRegenerate}
+          />
+        </main>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// ─── Node Tree (recursive) ─────────────────────────────────────
+function NodeTree({
+  nodes,
+  level,
+  onOpenLesson,
+  onOpenSubmodule,
+}: {
+  nodes: ContentNode[];
+  level: number;
+  onOpenLesson: (slug: string) => void;
+  onOpenSubmodule: (slug: string) => void;
+}) {
+  return (
+    <div className={`node-tree level-${level}`}>
+      {nodes.map((node) => (
+        <NodeTreeItem key={node.id} node={node} level={level} onOpenLesson={onOpenLesson} onOpenSubmodule={onOpenSubmodule} />
+      ))}
+    </div>
+  );
+}
+
+function NodeTreeItem({
+  node,
+  level,
+  onOpenLesson,
+  onOpenSubmodule,
+}: {
+  node: ContentNode;
+  level: number;
+  onOpenLesson: (slug: string) => void;
+  onOpenSubmodule: (slug: string) => void;
+}) {
+  const [children, setChildren] = useState<ContentNode[]>([]);
+  const [expanded, setExpanded] = useState(false);
+
+  const toggle = async () => {
+    if (!expanded && children.length === 0 && node.type !== "lesson") {
+      const c = await fetchChildren(node.id);
+      setChildren(c);
+    }
+    setExpanded(!expanded);
+  };
+
+  if (node.type === "lesson") {
+    return (
+      <button className="node-item lesson-item" onClick={() => onOpenLesson(node.slug)}>
+        <span className="node-icon">📄</span>
+        <span className="node-title">{node.title}</span>
+      </button>
+    );
   }
 
   return (
-    <div className="layout">
-      <header className="navbar"><div className="navbar-inner">
-        <button className="brand" onClick={goHome}><span className="brand-mark">T</span><span className="brand-text"><span className="brand-name">Tekstil Hafızam</span><span className="brand-sub">bilgi işletim sistemi</span></span></button>
-        <button className="nav-dashboard" onClick={goHome}>⊞ Panel</button>
-      </div></header>
-      <main className="main">
-        <nav className="crumbs">
-          <button className="crumb" onClick={goHome}>Tüm Modüller</button>
-          {crumbs.map((c) => <span key={c.id} className="crumb-wrap"><span className="crumb-sep">/</span><button className="crumb" onClick={() => navigateBySlug(c.slug)}>{c.title}</button></span>)}
-        </nav>
-        {!showLesson && <section className="page-header"><div>
-          <div className="eyebrow">{current ? TYPE_LABEL[current.type] : "Bilgi Bankası"}</div>
-          <h1 className="title">{current ? current.title : "Üniversite Seviyesinde Bilgi Ağacı"}</h1>
-          {typeof current?.description === "string" && <p className="desc">{current.description}</p>}
-          {!current && <p className="desc">Tekstil, Moda, İç Giyim, Sürdürülebilirlik, Strateji, İstatistik, Elisé Studio ve Bilgi Bankası modüllerini kapsayan kapsamlı içerik hiyerarşisi.</p>}
-        </div></section>}
-        {error && <div className="error">Hata: {error}</div>}
-        {showLesson && current && <LessonView node={current} nav={lessonNav} onNavigate={navigateBySlug} onBackToModule={goBackToModule} onBackToDashboard={goHome} />}
-        {loading && !showLesson && <div className="loading">Yükleniyor…</div>}
-        {!loading && !showLesson && children.length === 0 && <div className="empty"><div className="empty-icon">○</div><p>Bu dalın altında içerik kaydı yok.</p></div>}
-        {!showLesson && children.length > 0 && <div className="groups">{TYPE_ORDER.filter((t) => (grouped[t]?.length ?? 0) > 0).map((t) => (
-          <section key={t} className="group"><h2 className="group-title">{TYPE_LABEL[t]}<span className="group-count">{grouped[t].length}</span></h2>
-            <div className={`grid grid-${t}`}>{grouped[t].map((node) => { const cc = counts[node.id] ?? 0; return (
-              <button key={node.id} className="card" onClick={() => openNode(node)}>
-                <span className="card-icon"><Icon type={node.type} /></span>
-                <span className="card-body"><span className="card-title">{node.title}</span>{node.description && <span className="card-desc">{node.description}</span>}<span className="card-meta">{cc > 0 ? `${cc} alt başlık` : "ders içeriği"}</span></span>
-                <span className="card-arrow">→</span>
-              </button>); })}</div>
-          </section>))}</div>}
-      </main>
+    <div className="node-branch">
+      <button className="node-item branch-item" onClick={toggle}>
+        <span className="node-icon">{expanded ? "▼" : "▶"}</span>
+        <span className="node-type-badge">{node.type}</span>
+        <span className="node-title">{node.title}</span>
+      </button>
+      {expanded && children.length > 0 && (
+        <NodeTree nodes={children} level={level + 1} onOpenLesson={onOpenLesson} onOpenSubmodule={onOpenSubmodule} />
+      )}
     </div>
   );
+}
+
+function moduleIcon(slug: string): string {
+  const icons: Record<string, string> = {
+    "tekstil-bilgileri": "🧵",
+    "moda-bilgileri": "👗",
+    "ic-giyim": "👕",
+    "surdurulebilirlik": "♻️",
+    "strateji": "📊",
+    "istatistik": "📈",
+    "elise-studio": "🎨",
+    "bilgi-bankasi": "📚",
+  };
+  return icons[slug] || "📦";
 }

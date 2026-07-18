@@ -1,5 +1,4 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.110.7";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,251 +6,460 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-interface ContentNode {
-  id: string;
-  parent_id: string | null;
-  type: string;
-  title: string;
-  slug: string;
-  description: string | null;
-  position: number;
+// ─── Seeded random ──────────────────────────────────────────────
+function seededRandom(seed: number) {
+  let s = seed;
+  return () => {
+    s = (s * 9301 + 49297) % 233280;
+    return s / 233280;
+  };
 }
 
-type Difficulty = "beginner" | "intermediate" | "advanced";
+function slugToSeed(slug: string): number {
+  let h = 0;
+  for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) % 233280;
+  return h + 1;
+}
 
-const DIFF_LABEL: Record<Difficulty, string> = {
-  beginner: "Başlangıç",
-  intermediate: "Orta",
-  advanced: "İleri",
-};
-const DIFF_MINUTES: Record<Difficulty, number> = { beginner: 30, intermediate: 50, advanced: 75 };
+function pick<T>(rng: () => number, arr: T[]): T {
+  return arr[Math.floor(rng() * arr.length)];
+}
 
-// ---- Domain profiles (module-scoped content) ----
+function shuffle<T>(rng: () => number, arr: T[]): T[] {
+  const r = [...arr];
+  for (let i = r.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [r[i], r[j]] = [r[j], r[i]];
+  }
+  return r;
+}
+
+// ─── Domain profiles (module isolation) ─────────────────────────
 interface DomainProfile {
+  moduleSlug: string;
   keywords: string[];
   machines: string[];
   materials: string[];
   standards: string[];
   processes: string[];
   applications: string[];
-  references: { title: string; author: string; year: string }[];
-  // Domain-specific distractor pools — realistic wrong answers within the same field
-  distractors: {
-    fiber_types: string[];
-    process_types: string[];
-    material_types: string[];
-    property_values: string[];
-    standard_codes: string[];
-    application_areas: string[];
-  };
+  properties: string[];
+  references: string[];
+  distractors: string[];
+  glossary: Record<string, string>;
 }
 
-const DOMAIN_PROFILES: Record<string, DomainProfile> = {
+const PROFILES: Record<string, DomainProfile> = {
   "tekstil-bilgileri": {
-    keywords: ["elyaf", "iplik", "dokuma", "örme", "boya", "baskı", "terbiye", "kalite", "test", "mukavemet"],
-    machines: ["Ring iplik makinesi", "Open-end iplik makinesi", "Dokuma tezgahı", "Örme makinesi", "Boyama fıçısı", "Jigger", "Stenter", "Kalandır"],
-    materials: ["Pamuk", "Polyester", "Yün", "Viskon", "Akrilik", "Naylon", "Keten", "İpek"],
-    standards: ["ISO 2060", "ISO 2061", "ISO 139", "ISO 5079", "TS 1000", "OEKO-TEX 100"],
-    processes: ["İplik üretimi", "Dokuma hazırlık", "Dokuma", "Örme", "Boyama", "Baskı", "Apre", "Kalite kontrol"],
-    applications: ["Konfeksiyon", "Ev tekstili", "Teknik tekstil", "Tıbbi tekstil", "Otomotiv tekstil"],
-    references: [
-      { title: "Tekstil Malzeme Bilgisi", author: "Prof. Dr. N. Anış", year: "2018" },
-      { title: "İplik Teknolojisi", author: "Doç. Dr. M. Akkan", year: "2020" },
-      { title: "Dokuma ve Örme Teknikleri", author: "Prof. Dr. A. Soydan", year: "2019" },
-    ],
-    distractors: {
-      fiber_types: ["doğal bitkisel elyaftır", "doğal hayvansal elyaftır", "rejenere selüloz elyaftır", "sentetik poliamid elyaftır", "sentetik polyester elyaftır", "inorganik mineral elyaftır"],
-      process_types: ["çözgü hazırlama adımıdır", "atkı atma adımıdır", "ters baskı yöntemidir", "soğuk pad-batch yöntemidir", "merserizasyon işlemidir", "haşıl sökme işlemidir"],
-      material_types: ["pamuk elyaftan üretilir", "polyester elyaftan üretilir", "yün elyaftan üretilir", "viskon elyaftan üretilir", "akrilik elyaftan üretilir"],
-      property_values: ["yüksek mukavemet gösterir", "düşük uzama gösterir", "yüksek nemi emer", "düşük aşınma dayanımı gösterir", "orta esneklik gösterir"],
-      standard_codes: ["ISO 2060 standardı", "ISO 5079 standardı", "TS 1000 standardı", "OEKO-TEX 100 standardı", "ISO 139 standardı"],
-      application_areas: ["konfeksiyon sektöründe", "ev tekstilinde", "teknik tekstilde", "tıbbi tekstilde", "otomotiv tekstilde"],
+    moduleSlug: "tekstil-bilgileri",
+    keywords: ["elyaf", "iplik", "dokuma", "örme", "boyama", "terbiye", "pamuk", "polyester", "viskon", "yün", "ipek", "keten"],
+    machines: ["ring iplik makinesi", "open-end iplik makinesi", "dokuma tezgahı", " örme makinesi", "boyama cebi", "foulard", "stenter", "tarama makinesi", "pennetleme makinesi"],
+    materials: ["pamuk", "polyester", "viskon", "yün", "ipek", "keten", "naylon", "akrilik", "elastan", "polipropilen"],
+    standards: ["ISO 105", "ISO 139", "TS 3917", "Oeko-Tex 100", "GOTS", "ISO 5077", "ISO 6330"],
+    processes: ["taraklama", "pennetleme", "ring büküm", "open-end büküm", "dokuma", "örme", "boyama", "basma", "terbiye", "mercerizasyon"],
+    applications: ["giyim", "ev tekstili", "teknik tekstil", "medikal tekstil", "otomotiv tekstili"],
+    properties: ["mukavemet", "uzama", "neps", "iplik numarası", "büküm", "gramaj", "iylilik", "nem alma"],
+    references: ["Kadolph S.J., Textiles 12th Ed.", "Saville B.P., Physical Testing of Textiles", "Eberle H., Clothing Technology"],
+    distractors: ["pazarlama stratejisi", "finansal tablo", "veri madenciliği", "bulut bilişim", "mikroekonomi", "stok yönetimi", "müşteri ilişkileri", "lojistik optimizasyonu"],
+    glossary: {
+      "Elyaf": "İpliği oluşturan en küçük tekstil birimi",
+      "İplik": "Elyafların bükülmesiyle oluşan tekstil malzemesi",
+      "Büküm": "İpliğe mukavemet kazandıran spiral hareket",
+      "Gramaj": "Birim alandaki kumaş ağırlığı (g/m²)",
+      "Mukavemet": "Malzemenin kopmaya karşı direnci",
+      "Neps": "İplik yüzeyindeki düğümçükler",
+      "Taraklama": "Elyafları hizalayan hazırlık işlemi",
+      "Mercerizasyon": "Pamuk ipliğine parlaklık ve mukavemet kazandırma",
     },
   },
   "moda-bilgileri": {
-    keywords: ["trend", "sezon", "tasarım", "koleksiyon", "stil", "silüet", "kalıp", "dikiş", "prototip", "defile"],
-    machines: ["Dikiş makinesi", "Overlok", "Bileme makinesi", "Kalıp çıkarma sistemi", "CAD sistemi"],
-    materials: ["Kumaş", "Astar", "Tela", "Düğme", "Fermuar", "İplik", "Aksesuar"],
-    standards: ["ISO 3635", "ISO 8559", "TS 12990"],
-    processes: ["Trend analizi", "Tasarım", "Kalıp çıkarma", "Kesim", "Dikiş", "Prototip", "Üretim"],
-    applications: ["Hazır giyim", "Haute couture", "Prêt-à-porter", "Fast fashion", "Lüks segment"],
-    references: [
-      { title: "Moda Tasarımı ve Üretim", author: "Prof. Dr. A. Özkar", year: "2021" },
-      { title: "Moda Trendleri ve Stil", author: "Doç. Dr. S. Yıldırım", year: "2022" },
-    ],
-    distractors: {
-      fiber_types: ["klasik trend tipidir", "mikro trend tipidir", "fad trend tipidir", "makro trend tipidir"],
-      process_types: ["tasarım aşamasıdır", "kalıp çıkarma aşamasıdır", "prototip aşamasıdır", "üretim aşamasıdır"],
-      material_types: ["dikiş makinesinde uygulanır", "overlokta uygulanır", "CAD sisteminde uygulanır"],
-      property_values: ["yüksek kalite gösterir", "düşük maliyet gösterir", "premium segmenttir", "fast fashion segmenttir"],
-      standard_codes: ["ISO 3635 standardı", "ISO 8559 standardı", "TS 12990 standardı"],
-      application_areas: ["hazır giyimde", "haute couture'da", "prêt-à-porter'da", "fast fashion'da"],
+    moduleSlug: "moda-bilgileri",
+    keywords: ["trend", "sezon", "tasarım", "koleksiyon", "defile", "stil", "kalıp", "dikiş", "konfeksiyon", "marka"],
+    machines: ["dikiş makinesi", "overlok", "serger", "kalıp kesim makinesi", "nakış makinesi", "fırçalama makinesi"],
+    materials: ["kumaş", "aşık", "fermuar", "düğme", "etiket", "astar", "kumaş boyası"],
+    standards: ["ISO 3635", "ISO 8559", "TS 12953", "ISO 3758", "ISO 6348"],
+    processes: ["kalıp çıkarma", "kesim", "dikiş", "ütü", "kalite kontrol", "paketleme"],
+    applications: ["kadın giyim", "erkek giyim", "çocuk giyim", "spor giyim", "iç giyim"],
+    properties: ["kalıp uyumu", "dikiş kalitesi", "beden toleransı", "şekil korunumu", "konfor"],
+    references: ["Sorger S., The Fundamentals of Fashion Design", "Jenkyn Jones S., Fashion Design"],
+    distractors: ["iplik büküm yönü", "boyama sıcaklığı", "neps değeri", "elyaf inceliği", "mercerizasyon", "foulard", "stenter", "ring iplik"],
+    glossary: {
+      "Trend": "Belirli bir dönemde popüler olan stil yönü",
+      "Koleksiyon": "Bir sezona ait tasarım serisi",
+      "Kalıp": "Kumaşın kesim şablonu",
+      "Konfeksiyon": "Hazır giyim üretimi",
+      "Defile": "Yeni koleksiyonun sunulduğu gösteri",
+      "Beden": "Giysinin ölçü standardı",
+      "Astar": "Giysinin iç yüzey dokusu",
+      "Fermuar": "Açılır kapanır bağlantı elemanı",
     },
   },
   "ic-giyim": {
-    keywords: ["sütyen", "külot", "atlet", "korse", "body", "ölçü", "beden", "elastik"],
-    machines: ["Sütyen dikiş makinesi", "Overlok", "Zigzag makinesi", "Kesim makinesi"],
-    materials: ["Dantel", "Saten", "Pamuk", "Elastan", "Polyamid", "Tül", "Lastik"],
-    standards: ["ISO 3635", "TS 12990", "OEKO-TEX 100"],
-    processes: ["Ölçü alma", "Kalıp çıkarma", "Kesim", "Dikiş", "Baskı", "Kalite kontrol"],
-    applications: ["Kadın iç giyim", "Erkek iç giyim", "Çocuk iç giyim", "Spor iç giyim"],
-    references: [
-      { title: "İç Giyim Tasarımı ve Teknolojisi", author: "Doç. Dr. H. Kavak", year: "2020" },
-    ],
-    distractors: {
-      fiber_types: ["dantel malzemeden üretilir", "saten malzemeden üretilir", "tül malzemeden üretilir", "elastan malzemeden üretilir"],
-      process_types: ["ölçü alma adımıdır", "kalıp çıkarma adımıdır", "kesim adımıdır", "dikiş adımıdır"],
-      material_types: ["sütyen üretiminde kullanılır", "külot üretiminde kullanılır", "korse üretiminde kullanılır"],
-      property_values: ["yüksek elastikiyet gösterir", "düşük aşınma dayanımı gösterir", "yüksek nefes alabilirlik gösterir"],
-      standard_codes: ["ISO 3635 standardı", "TS 12990 standardı", "OEKO-TEX 100 standardı"],
-      application_areas: ["kadın iç giyimde", "erkek iç giyimde", "spor iç giyimde", "çocuk iç giyimde"],
+    moduleSlug: "ic-giyim",
+    keywords: ["sütyen", "külot", "korse", "pijama", "atlet", "iç giyim", "sütyen bedeni", "balen", "dikiş"],
+    machines: ["dikiş makinesi", "overlok", "serger", "kalıp kesim makinesi", "nakış makinesi"],
+    materials: ["pamuk", "dantel", "elastan", "polyester", "viskon", "mikrofiber"],
+    standards: ["ISO 3635", "ISO 8559", "TS 12953", "Oeko-Tex 100"],
+    processes: ["kalıp çıkarma", "kesim", "dikiş", "etiketleme", "paketleme"],
+    applications: ["kadın iç giyim", "erkek iç giyim", "çocuk iç giyim", "gecelik", "pijama"],
+    properties: ["konfor", "esneklik", "beden uyumu", "hava geçirgenliği", "nem emicilik"],
+    references: ["Fan J., Clothing Appearance and Fit", "Labat K., Bra Sizing"],
+    distractors: ["iplik büküm yönü", "boyama sıcaklığı", "neps değeri", "elyaf inceliği", "mercerizasyon", "foulard", "stenter", "ring iplik"],
+    glossary: {
+      "Balen": "Sütyenin formunu koruyan çubuk",
+      "Sütyen bedeni": "Göğüs çevresi ölçüm standardı",
+      "Korse": "Vücudu saran şekillendirici giysi",
+      "Dantel": "Dekoratif açık dokuma kumaş",
+      "Atlet": "Erkek iç üst giysisi",
+      "Pijama": "Uyku giysisi",
+      "Mikrofiber": "Çok ince elyaftan üretilmiş kumaş",
+      "Elastan": "Esneklik sağlayan sentetik elyaf",
     },
   },
   "surdurulebilirlik": {
-    keywords: ["geri dönüşüm", "organik", "GOTS", "GRS", "su tüketimi", "karbon ayak izi", "döngüsel", "atık", "LCA"],
-    machines: ["Geri dönüşüm tesisi", "Su arıtma sistemi", "Güneş enerjisi panelleri"],
-    materials: ["Organik pamuk", "Geri dönüştürülmüş polyester", "Tencel", "Lyocell", "Kenevir", "Bambu"],
-    standards: ["GOTS", "GRS", "BCI", "OEKO-TEX 100", "ISO 14001", "Higg Index"],
-    processes: ["Yaşam döngüsü analizi", "Atık yönetimi", "Su arıtma", "Geri dönüşüm", "Sertifikasyon"],
-    applications: ["Sürdürülebilir moda", "Döngüsel ekonomi", "Yeşil üretim", "Etik tedarik"],
-    references: [
-      { title: "Sürdürülebilir Tekstil ve Moda", author: "Prof. Dr. E. Önder", year: "2022" },
-    ],
-    distractors: {
-      fiber_types: ["organik pamuk elyaftır", "geri dönüştürülmüş polyesterdir", "Tencel elyaftır", "Lyocell elyaftır"],
-      process_types: ["yaşam döngüsü analizidir", "atık yönetimi sürecidir", "su arıtma sürecidir", "geri dönüşüm sürecidir"],
-      material_types: ["organik pamuktan üretilir", "geri dönüştürülmüş polyesterten üretilir", "Tencel'den üretilir"],
-      property_values: ["düşük çevresel etki gösterir", "düşük su tüketimi gösterir", "düşük karbon ayak izi gösterir"],
-      standard_codes: ["GOTS standardı", "GRS standardı", "BCI standardı", "ISO 14001 standardı"],
-      application_areas: ["sürdürülebilir modada", "döngüsel ekonomide", "yeşil üretimde", "etik tedarikte"],
+    moduleSlug: "surdurulebilirlik",
+    keywords: ["sürdürülebilirlik", "geri dönüşüm", "organik", "GOTS", "döngüsel ekonomi", "karbon ayak izi", "atık yönetimi", "LCA"],
+    machines: ["geri dönüşüm tesisleri", "su arıtma sistemi", "güneş paneli", "rüzgar türbini"],
+    materials: ["organik pamuk", "geri dönüştürülmüş polyester", "Tencel", "keten", "konopalı elyaf"],
+    standards: ["GOTS", "Oeko-Tex 100", "ISO 14001", "ISO 14040", "Higg Index"],
+    processes: ["geri dönüşüm", "su arıtma", "karbon dengeleme", "atık azaltımı", "enerji verimliliği"],
+    applications: ["sürdürülebilir üretim", "döngüsel ekonomi", "yeşil tedarik zinciri"],
+    properties: ["karbon ayak izi", "su tüketimi", "enerji tüketimi", "atık miktarı", "LCA skoru"],
+    references: ["Niinimäki K., Sustainable Fashion in a Circular Economy", "GOTS Standard v7"],
+    distractors: ["pazarlama stratejisi", "finansal tablo", "veri madenciliği", "bulut bilişim", "mikroekonomi", "stok yönetimi", "müşteri ilişkileri", "lojistik optimizasyonu"],
+    glossary: {
+      "Sürdürülebilirlik": "Gelecek nesilleri tehlikeye atmadan üretim",
+      "GOTS": "Global Organic Textile Standard sertifikası",
+      "Döngüsel ekonomi": "Atığı en aza indiren ekonomik model",
+      "LCA": "Yaşam döngüsü değerlendirmesi",
+      "Karbon ayak izi": "Üretimde salınan sera gazı miktarı",
+      "Geri dönüşüm": "Atık malzemenin tekrar hammaddeye çevrilmesi",
+      "Organik pamuk": "Sentetik kimyasal kullanılmadan üretilen pamuk",
+      "Higg Index": "Sürdürülebilirlik ölçüm çerçevesi",
     },
   },
   "strateji": {
-    keywords: ["marka", "konumlandırma", "pazarlama", "hedef kitle", "kanal", "fiyatlandırma", "SWOT", "rekabet", "büyüme", "değer önerisi"],
-    machines: [],
-    materials: [],
-    standards: ["ISO 9001", "ISO 26000"],
-    processes: ["Durum analizi", "Hedef belirleme", "Strateji geliştirme", "Uygulama", "Performans izleme"],
-    applications: ["Marka yönetimi", "Pazarlama stratejisi", "Kurumsal planlama", "Rekabet analizi", "Büyüme planlaması"],
-    references: [
-      { title: "Stratejik Yönetim", author: "Prof. Dr. A. Ümit", year: "2020" },
-      { title: "Marka Yönetimi", author: "Doç. Dr. C. Şimşek", year: "2021" },
-    ],
-    distractors: {
-      fiber_types: ["maliyet liderliği stratejisidir", "farklılaştırma stratejisidir", "odaklanma stratejisidir", "büyüme stratejisidir"],
-      process_types: ["durum analizidir", "hedef belirleme adımıdır", "strateji geliştirme adımıdır", "performans izleme adımıdır"],
-      material_types: ["SWOT analizinde kullanılır", "Porter analizinde kullanılır", "BCG matrisinde kullanılır"],
-      property_values: ["yüksek rekabet avantajı sağlar", "düşük maliyet sağlar", "yüksek pazar payı sağlar"],
-      standard_codes: ["ISO 9001 standardı", "ISO 26000 standardı"],
-      application_areas: ["marka yönetiminde", "pazarlama stratejisinde", "kurumsal planlamada", "rekabet analizinde"],
+    moduleSlug: "strateji",
+    keywords: ["strateji", "vizyon", "misyon", "SWOT", "rekabet avantajı", "pazarlama", "müşteri", "konumlandırma", "büyüme"],
+    machines: ["CRM sistemi", "ERP sistemi", "veri ambarı", "BI aracı"],
+    materials: ["veri", "raporlar", "anket sonuçları", "müşteri geri bildirimi"],
+    standards: ["ISO 9001", "ISO 26000", "SA 8000", "BSCI"],
+    processes: ["stratejik planlama", "pazar araştırması", "SWOT analizi", "konumlandırma", "hedefleme"],
+    applications: ["şirket yönetimi", "pazarlama stratejisi", "marka yönetimi", "büyüme planı", "kriz yönetimi"],
+    properties: ["pazar payı", "müşteri sadakati", "marka değeri", "ROI", "rekabet gücü"],
+    references: ["Porter M.E., Competitive Strategy", "Kotler P., Marketing Management", "Kaplan R., Balanced Scorecard"],
+    distractors: ["iplik büküm yönü", "boyama sıcaklığı", "neps değeri", "elyaf inceliği", "mercerizasyon", "foulard", "stenter", "ring iplik", "pamuk elyafı", "dokuma tezgahı"],
+    glossary: {
+      "Strateji": "Uzun vadeli hedeflere ulaşma planı",
+      "Vizyon": "Şirketin gelecekte ulaşmak istediği durum",
+      "Misyon": "Şirketin bugünkü amacı ve varlık nedeni",
+      "SWOT": "Güçlü-zayıf yönler, fırsat-tehdit analizi",
+      "Rekabet avantajı": "Rakiplere göre üstünlük sağlayan özellik",
+      "Konumlandırma": "Tüketicinin zihninde marka yerleşimi",
+      "ROI": "Yatırım getiri oranı",
+      "Marka değeri": "Markanın yarattığı algısal ve finansal değer",
     },
   },
   "istatistik": {
-    keywords: ["ortalama", "medyan", "standart sapma", "varyans", "olasılık", "dağılım", "korelasyon", "regresyon", "hipotez", "örneklem"],
-    machines: [],
-    materials: [],
-    standards: ["ISO 3534", "ISO 5479", "TS ISO 2859"],
-    processes: ["Veri toplama", "Veri temizleme", "Tanımlayıcı analiz", "Çıkarımsal analiz", "Hipotez testi", "Raporlama"],
-    applications: ["Kalite kontrol", "Üretim analizi", "Pazar araştırması", "Tahminleme", "Karar destek"],
-    references: [
-      { title: "İstatistiksel Yöntemler", author: "Prof. Dr. M. Orhunbilge", year: "2019" },
-    ],
-    distractors: {
-      fiber_types: ["ortalama bir merkezi eğilim ölçüsüdür", "medyan bir merkezi eğilim ölçüsüdür", "mod bir merkezi eğilim ölçüsüdür", "standart sapma bir dağılım ölçüsüdür"],
-      process_types: ["tanımlayıcı analizdir", "çıkarımsal analizdir", "hipotez testidir", "regresyon analizidir"],
-      material_types: ["örneklem analizi", "evren analizi", "pilot çalışma"],
-      property_values: ["yüksek korelasyon gösterir", "düşük varyans gösterir", "normal dağılım gösterir"],
-      standard_codes: ["ISO 3534 standardı", "ISO 5479 standardı", "TS ISO 2859 standardı"],
-      application_areas: ["kalite kontrolde", "üretim analizinde", "pazar araştırmasında", "tahminlemede"],
+    moduleSlug: "istatistik",
+    keywords: ["ortalama", "medyan", "standart sapma", "varyans", "korelasyon", "regresyon", "hipotez testi", "olasılık", "dağılım"],
+    machines: ["R", "Python", "SPSS", "Excel", "SAS"],
+    materials: ["veri seti", "örneklem", "anket verisi", "ölçüm sonuçları"],
+    standards: ["ISO 3534", "ISO 5479", "ISO 2859"],
+    processes: ["veri toplama", "temizleme", "analiz", "görselleştirme", "raporlama"],
+    applications: ["kalite kontrol", "tahmin", "pazar araştırması", "A/B testi", "anomali tespiti"],
+    properties: ["ortalama", "medyan", "mod", "standart sapma", "varyans", "korelasyon katsayısı", "p-değeri"],
+    references: ["Montgomery D.C., Applied Statistics and Probability", "Field A., Discovering Statistics Using R"],
+    distractors: ["pazarlama stratejisi", "finansal tablo", "veri madenciliği", "bulut bilişim", "mikroekonomi", "stok yönetimi", "müşteri ilişkileri", "lojistik optimizasyonu", "iplik büküm yönü", "boyama sıcaklığı"],
+    glossary: {
+      "Ortalama": "Verilerin toplamının sayısına bölümü",
+      "Medyan": "Sıralı verinin ortanca değeri",
+      "Standart sapma": "Verilerin ortalamadan yayılımı",
+      "Varyans": "Standart sapmanın karesi",
+      "Korelasyon": "İki değişken arasındaki ilişki",
+      "p-değeri": "Hipotez testinde anlamlılık ölçütü",
+      "Regresyon": "Değişkenler arası bağımlılık modeli",
+      "Olasılık": "Bir olayın gerçekleşme şansı",
     },
   },
   "elise-studio": {
-    keywords: ["tasarım", "prototip", "kalıp", "üretim", "geliştirme", "stüdyo", "koleksiyon", "numune"],
-    machines: ["CAD sistemi", "Prototip atölyesi", "Dikiş makinesi", "3D yazıcı"],
-    materials: ["Kumaş", "Astar", "Tela", "Numune malzemesi"],
-    standards: ["ISO 3635", "TS 12990"],
-    processes: ["Tasarım", "Prototip", "Kalıp", "Numune", "Üretim"],
-    applications: ["Ürün geliştirme", "Koleksiyon tasarımı", "Prototip üretimi", "Numune hazırlama"],
-    references: [{ title: "Stüdyo Tasarım ve Üretim", author: "Elisé Studio", year: "2023" }],
-    distractors: {
-      fiber_types: ["tasarım aşamasıdır", "prototip aşamasıdır", "kalıp aşamasıdır", "numune aşamasıdır"],
-      process_types: ["tasarım sürecidir", "prototip sürecidir", "kalıp sürecidir", "üretim sürecidir"],
-      material_types: ["CAD sisteminde kullanılır", "prototip atölyesinde kullanılır", "3D yazıcıda kullanılır"],
-      property_values: ["yüksek hassasiyet gösterir", "düşük maliyet gösterir", "hızlı üretim sağlar"],
-      standard_codes: ["ISO 3635 standardı", "TS 12990 standardı"],
-      application_areas: ["ürün geliştirmede", "koleksiyon tasarımında", "prototip üretiminde"],
+    moduleSlug: "elise-studio",
+    keywords: ["tasarım", "logo", "marka kimliği", "tipografi", "renk paleti", "dijital tasarım", "grafik", "vektör"],
+    machines: ["Illustrator", "Photoshop", "Figma", "InDesign", "CorelDRAW"],
+    materials: ["vektör dosyaları", "fontlar", "ikonlar", "fotoğraflar", "şablonlar"],
+    standards: ["ISO 9241", "WCAG 2.1", "sRGB", "ISO 12647"],
+    processes: ["tasarım briefi", "araştırma", "konsept geliştirme", "taslak", "revizon", "teslim"],
+    applications: ["marka kimliği", "logo tasarımı", "ambalaj", "web tasarımı", "basılı materyal"],
+    properties: ["görsel hiyerarşi", "kontrast", "denge", "hizalama", "renk uyumu"],
+    references: ["Lupton E., Graphic Design Thinking", "Heller S., The Graphic Design Reader"],
+    distractors: ["iplik büküm yönü", "boyama sıcaklığı", "neps değeri", "elyaf inceliği", "mercerizasyon", "foulard", "stenter", "ring iplik", "pamuk elyafı", "dokuma tezgahı"],
+    glossary: {
+      "Logo": "Markanın grafik simgesi",
+      "Tipografi": "Metin düzenleme sanatı",
+      "Renk paleti": "Tasarımda kullanılan renk seti",
+      "Vektör": "Çözünürlükten bağımsız grafik formatı",
+      "Marka kimliği": "Markanın görsel ve davranışsal bütünü",
+      "Görsel hiyerarşi": "Öğelerin önem sırasına göre düzenlenmesi",
+      "Kontrast": "Açık-koyu veya tamamlayıcı renk farkı",
+      "Hizalama": "Öğelerin düzenli yerleşimi",
     },
   },
   "bilgi-bankasi": {
-    keywords: ["terim", "sözlük", "tanım", "kavram", "referans", "kaynak", "bilgi"],
-    machines: [],
-    materials: [],
-    standards: ["ISO 9001"],
-    processes: ["Bilgi derleme", "Sınıflandırma", "Düzenleme", "Erişim"],
-    applications: ["Referans", "Eğitim", "Araştırma"],
-    references: [{ title: "Tekstil Terimleri Sözlüğü", author: "TMMOB", year: "2019" }],
-    distractors: {
-      fiber_types: ["temel kavramdır", "teknik terimdir", "referans kavramdır"],
-      process_types: ["bilgi derleme sürecidir", "sınıflandırma sürecidir", "düzenleme sürecidir"],
-      material_types: ["eğitimde kullanılır", "araştırmada kullanılır", "referans olarak kullanılır"],
-      property_values: ["genel kapsamlıdır", "teknik kapsamlıdır", "pratik kapsamlıdır"],
-      standard_codes: ["ISO 9001 standardı"],
-      application_areas: ["referans amaçlı", "eğitim amaçlı", "araştırma amaçlı"],
+    moduleSlug: "bilgi-bankasi",
+    keywords: ["bibliyografya", "atıf", "kaynak", "arama", "dizin", "kütüphane", "veritabanı", "meta veri"],
+    machines: ["arama motoru", "veritabanı sunucusu", "dizinleme sistemi", "DOI sistemi"],
+    materials: ["makaleler", "kitaplar", "tezkler", "raporlar", "patentler"],
+    standards: ["ISO 690", "APA 7", "MLA 9", "Chicago", "DOI"],
+    processes: ["kaynak tarama", "dizinleme", "atıf yönetimi", "dışa aktarma", "arşivleme"],
+    applications: ["akademik araştırma", "literatür taraması", "kaynak yönetimi", "bilişsel haritalama"],
+    properties: ["erişim hızı", "doğruluk", "güncellik", "kapsam", "atıf sayısı"],
+    references: ["ISO 690:2021", "APA Publication Manual 7th Ed.", "University of Chicago Press, CMoS 17"],
+    distractors: ["pazarlama stratejisi", "finansal tablo", "veri madenciliği", "bulut bilişim", "mikroekonomi", "stok yönetimi", "müşteri ilişkileri", "lojistik optimizasyonu", "iplik büküm yönü", "boyama sıcaklığı"],
+    glossary: {
+      "Bibliyografya": "Kaynakların listesi",
+      "Atıf": "Bir kaynağa referans verme",
+      "DOI": "Dijital nesne tanımlayıcısı",
+      "Meta veri": "Veri hakkında veri",
+      "Dizin": "Kaynakların konuya göre sıralandığı liste",
+      "Veritabanı": "Yapılı bilgi deposu",
+      "Arama motoru": "Bilgi bulma aracı",
+      "Arşivleme": "Kaynakların kalıcı saklanması",
     },
   },
 };
 
-function getProfile(rootSlug: string): DomainProfile {
-  return DOMAIN_PROFILES[rootSlug] ?? DOMAIN_PROFILES["bilgi-bankasi"];
-}
-
-function fail(msg: string, status = 400): Response {
-  return new Response(JSON.stringify({ error: msg }), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-}
-function ok(data: unknown): Response {
-  return new Response(JSON.stringify(data), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-}
-
-function seededRandom(seed: string): () => number {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return () => { h += 0x6d2b79f5; let t = h; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-}
-function pick<T>(rng: () => number, arr: T[]): T { return arr[Math.floor(rng() * arr.length)]; }
-function shuffle<T>(rng: () => number, arr: T[]): T[] {
-  const out = [...arr];
-  for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; }
-  return out;
-}
-function take<T>(rng: () => number, arr: T[], n: number): T[] { return shuffle(rng, arr).slice(0, n); }
-
-// =========================================================================
-// QUIZ ENGINE — Content-driven, 10+ question types, real distractors
-// =========================================================================
-// Every question is generated FROM the lesson content (title, definition,
-// children, properties, advantages, etc.). Distractors are domain-specific
-// realistic wrong answers — never random words, never "all/none of the above".
-
-type QuestionType =
-  | "definition" | "classification" | "true_false" | "comparison"
-  | "application" | "technical_properties" | "manufacturing_process"
-  | "advantages" | "disadvantages" | "case_study";
-
-const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
-  definition: "Tanım",
-  classification: "Sınıflandırma",
-  true_false: "Doğru/Yanlış",
-  comparison: "Karşılaştırma",
-  application: "Uygulama",
-  technical_properties: "Teknik Özellik",
-  manufacturing_process: "Üretim Süreci",
-  advantages: "Avantaj",
-  disadvantages: "Dezavantaj",
-  case_study: "Vaka Çalışması",
+const DEFAULT_PROFILE: DomainProfile = {
+  moduleSlug: "genel",
+  keywords: ["textil", "üretim", "kalite", "süreç"],
+  machines: ["üretim hattı", "kontrol sistemi"],
+  materials: ["hammadde", "yarı mamul", "mamul"],
+  standards: ["ISO 9001", "ISO 14001"],
+  processes: ["üretim", "kontrol", "depolama"],
+  applications: ["endüstriyel üretim"],
+  properties: ["verim", "kalite", "maliyet"],
+  references: ["Genel Üretim El Kitabı"],
+  distractors: ["pazarlama stratejisi", "finansal tablo", "veri madenciliği", "bulut bilişim"],
+  glossary: { Üretim: "Mamul elde etme süreci", Kalite: "Uygunluk derecesi" },
 };
 
+function getProfile(moduleSlug: string): DomainProfile {
+  return PROFILES[moduleSlug] || DEFAULT_PROFILE;
+}
+
+function findModuleSlug(node: any, allNodes: any[]): string {
+  let current = node;
+  while (current && current.parent_id) {
+    current = allNodes.find((n) => n.id === current.parent_id);
+  }
+  return current?.slug || "genel";
+}
+
+// ─── Section builders ───────────────────────────────────────────
+function buildSections(node: any, profile: DomainProfile, children: any[], siblings: any[], rng: () => number): any {
+  const title = node.title;
+  const desc = node.description || `${title} konusunun detaylı incelenmesi.`;
+  const moduleTitle = profile.moduleSlug.replace(/-/g, " ");
+
+  const sections: Record<string, any> = {};
+
+  // 1. Öğrenme Hedefleri
+  sections["ogrenme_hedefleri"] = {
+    title: "Öğrenme Hedefleri",
+    type: "list",
+    items: [
+      `${title} kavramını tanımlayabilme`,
+      `${title} kapsamında temel süreçleri açıklayabilme`,
+      `${title} ile ilgili teknik parametreleri hesaplayabilme`,
+      `${title} uygulamalarını endüstriyel örneklerle analiz edebilme`,
+      `${title} konusundaki kalite kriterlerini değerlendirebilme`,
+    ],
+  };
+
+  // 2. Giriş
+  sections["giris"] = {
+    title: "Giriş",
+    type: "text",
+    content: `${title}, ${moduleTitle} alanının temel konularından biridir. ${desc} Bu bölümde ${title.toLowerCase()} kavramı, temel ilkeleri, endüstriyel uygulamaları ve kalite parametreleri açısından kapsamlı biçimde ele alınacaktır. Konu, teorik temellerden pratik uygulamalara doğru bir sırayla yapılandırılmıştır.`,
+  };
+
+  // 3. Tanım ve Kavramlar
+  sections["tanim_ve_kavramlar"] = {
+    title: "Tanım ve Kavramlar",
+    type: "text",
+    content: `${title}, ${profile.keywords.slice(0, 3).join(", ")} bağlamında tanımlandığında, ${desc.toLowerCase()} Bu kavramın doğru anlaşılması için ${profile.keywords[0]} ve ${profile.keywords[1] || profile.keywords[0]} arasındaki ilişkinin kavranması gerekir.`,
+  };
+
+  // 4. Tarihsel Gelişim
+  sections["tarihsel_gelisim"] = {
+    title: "Tarihsel Gelişim",
+    type: "text",
+    content: `${title} kavramı, endüstriyel gelişim sürecinde önemli dönüşümler geçirmiştir. İlk uygulamalar ${profile.keywords[0]} üzerine kuruludur. Modern dönemde ${profile.machines[0]} ve ${profile.machines[1] || profile.machines[0]} kullanımı ile süreçler standartlaştırılmıştır.`,
+  };
+
+  // 5. Temel İlkeler
+  sections["temel_ilkeler"] = {
+    title: "Temel İlkeler",
+    type: "list",
+    items: [
+      `${title} sürecinde ${profile.properties[0]} gözetilir`,
+      `${profile.keywords[0]} ve ${profile.keywords[1] || profile.keywords[0]} dengesi korunur`,
+      `${profile.standards[0]} standardı referans alınır`,
+      `${profile.processes[0]} adımı özenle uygulanır`,
+    ],
+  };
+
+  // 6. Sınıflandırma
+  sections["siniflandirma"] = {
+    title: "Sınıflandırma",
+    type: "table",
+    headers: ["Kategori", "Özellik", "Kullanım Alanı"],
+    rows: profile.materials.slice(0, 4).map((m, i) => [
+      m,
+      profile.properties[i % profile.properties.length],
+      profile.applications[i % profile.applications.length],
+    ]),
+  };
+
+  // 7. Teknik Parametreler
+  sections["teknik_parametreler"] = {
+    title: "Teknik Parametreler",
+    type: "table",
+    headers: ["Parametre", "Birim", "Tipik Değer"],
+    rows: profile.properties.slice(0, 5).map((p, i) => [
+      p,
+      i % 2 === 0 ? "g/m²" : "%",
+      i % 2 === 0 ? `${15 + i * 10}-${25 + i * 10}` : `${2 + i}-${5 + i}`,
+    ]),
+  };
+
+  // 8. Malzemeler
+  sections["malzemeler"] = {
+    title: "Malzemeler",
+    type: "list",
+    items: profile.materials.slice(0, 5).map((m) => `${m}: ${title} sürecinde kullanılan temel malzeme`),
+  };
+
+  // 9. Makine ve Ekipmanlar
+  sections["makine_ve_ekipmanlar"] = {
+    title: "Makine ve Ekipmanlar",
+    type: "list",
+    items: profile.machines.slice(0, 5).map((m) => `${m}: ${title} üretiminde kullanılan ekipman`),
+  };
+
+  // 10. Üretim Süreci
+  sections["uretim_sureci"] = {
+    title: "Üretim Süreci",
+    type: "text",
+    content: `${title} üretim süreci şu adımları içerir: ${profile.processes.slice(0, 5).join(" → ")}. Sürecin her adımında ${profile.standards[0]} standardına uyum sağlanır ve ${profile.properties[0]} kontrol edilir.`,
+  };
+
+  // 11. Kalite Kontrol
+  sections["kalite_kontrol"] = {
+    title: "Kalite Kontrol",
+    type: "text",
+    content: `Kalite kontrol aşamasında ${profile.properties.slice(0, 3).join(", ")} parametreleri ölçülür. ${profile.standards[0]} ve ${profile.standards[1] || profile.standards[0]} standartlarına göre değerlendirme yapılır. Uygun olmayan ürünler tespit edilip ${profile.processes[0]} adımına geri gönderilir.`,
+  };
+
+  // 12. Uygulama Alanları
+  sections["uygulama_alanlari"] = {
+    title: "Uygulama Alanları",
+    type: "list",
+    items: profile.applications.map((a) => `${a}: ${title} uygulamasının kullanıldığı sektör`),
+  };
+
+  // 13. Avantajlar
+  sections["avantajlar"] = {
+    title: "Avantajlar",
+    type: "list",
+    items: [
+      `${profile.properties[0]} bakımından yüksek performans`,
+      `${profile.standards[0]} uyumu ile güvenilirlik`,
+      `${profile.processes[0]} verimliliği`,
+      `${profile.applications[0]} alanında geniş kullanım`,
+    ],
+  };
+
+  // 14. Dezavantajlar
+  sections["dezavantajlar"] = {
+    title: "Dezavantajlar",
+    type: "list",
+    items: [
+      `${profile.properties[0]} değerinde dalgalanma riski`,
+      `${profile.machines[0]} yatırım maliyeti`,
+      `${profile.processes[0]} adımında uzmanlık gereksinimi`,
+      `${profile.standards[0]} uyum maliyeti`,
+    ],
+  };
+
+  // 15. Standartlar ve Normlar
+  sections["standartlar_ve_normlar"] = {
+    title: "Standartlar ve Normlar",
+    type: "table",
+    headers: ["Standart", "Kapsam"],
+    rows: profile.standards.slice(0, 5).map((s) => [s, `${title} kalite kriterleri`]),
+  };
+
+  // 16. Sık Yapılan Hatalar
+  sections["sik_yapilan_hatalar"] = {
+    title: "Sık Yapılan Hatalar",
+    type: "list",
+    items: [
+      `${profile.properties[0]} değerinin yanlış ölçülmesi`,
+      `${profile.processes[0]} adımında ${profile.standards[0]} dışına çıkılması`,
+      `${profile.machines[0]} ayarlarının hatalı yapılması`,
+      `${profile.materials[0]} seçiminde uygun olmayan kalitenin kullanılması`,
+    ],
+  };
+
+  // 17. Vaka Çalışması
+  sections["vaka_calismasi"] = {
+    title: "Vaka Çalışması",
+    type: "text",
+    content: `Bir ${profile.applications[0]} firmasında ${title} uygulaması: Üretim hattında ${profile.machines[0]} kullanılarak ${profile.properties[0]} %${15 + Math.floor(rng() * 20)} artırılmıştır. Kalite kontrol sonucunda ${profile.standards[0]} uyumu sağlanmış ve müşteri reddi oranı %${Math.floor(rng() * 5)}'e düşmüştür.`,
+  };
+
+  // 18. Özet
+  sections["ozet"] = {
+    title: "Özet",
+    type: "text",
+    content: `${title}, ${moduleTitle} alanında ${profile.properties[0]} ve ${profile.standards[0]} çerçevesinde yürütülen kritik bir süreçtir. Bu bölümde ${title.toLowerCase()} kavramı, temel ilkeleri, teknik parametreleri ve endüstriyel uygulamaları ile birlikte ele alınmıştır.`,
+  };
+
+  // 19. Terimler Sözlüğü
+  sections["terimler_sozlugu"] = {
+    title: "Terimler Sözlüğü",
+    type: "glossary",
+    items: Object.entries(profile.glossary).slice(0, 8).map(([term, def]) => ({ term, definition: def })),
+  };
+
+  // 20. İlgili Konular
+  sections["ilgili_konular"] = {
+    title: "İlgili Konular",
+    type: "list",
+    items: siblings.filter((s) => s.id !== node.id).slice(0, 5).map((s) => s.title),
+  };
+
+  // 21. Referanslar
+  sections["referanslar"] = {
+    title: "Referanslar",
+    type: "list",
+    items: profile.references,
+  };
+
+  // 22. Görsel Şema
+  sections["gorsel_sema"] = {
+    title: "Görsel Şema",
+    type: "diagram",
+    prompt: `${title} sürecinin akış şeması: ${profile.processes.slice(0, 5).join(" → ")} adımlarını gösteren teknik diyagram, ${profile.moduleSlug} alanı`,
+    caption: `${title} üretim akış şeması`,
+  };
+
+  return sections;
+}
+
+// ─── Quiz engine ────────────────────────────────────────────────
 interface QuizQuestion {
-  type: QuestionType;
+  type: string;
   type_label: string;
   question: string;
   options: string[];
@@ -260,646 +468,413 @@ interface QuizQuestion {
   explanations: string[];
 }
 
-function buildQuiz(
-  node: ContentNode,
-  children: ContentNode[],
-  siblings: ContentNode[],
-  profile: DomainProfile,
-  diff: Difficulty,
-): QuizQuestion[] {
-  const rng = seededRandom(node.slug + ":quiz:v3:" + diff);
+const QUIZ_TYPES = [
+  { type: "definition", label: "Tanım" },
+  { type: "classification", label: "Sınıflandırma" },
+  { type: "true_false", label: "Doğru-Yanlış" },
+  { type: "comparison", label: "Karşılaştırma" },
+  { type: "application", label: "Uygulama" },
+  { type: "technical_properties", label: "Teknik Özellik" },
+  { type: "manufacturing_process", label: "Üretim Süreci" },
+  { type: "advantages", label: "Avantajlar" },
+  { type: "disadvantages", label: "Dezavantajlar" },
+  { type: "case_study", label: "Vaka Çalışması" },
+];
+
+function buildQuiz(node: any, profile: DomainProfile, children: any[], siblings: any[], rng: () => number): QuizQuestion[] {
   const questions: QuizQuestion[] = [];
-  const d = profile.distractors;
-
-  // Helper: make a 4-option question with shuffled correct position
-  function makeQ(
-    type: QuestionType,
-    question: string,
-    correct: string,
-    distractors: string[],
-    explanation: string,
-    explanations: string[],
-  ): QuizQuestion {
-    const opts = shuffle(rng, [correct, ...distractors.slice(0, 3)]);
-    return {
-      type,
-      type_label: QUESTION_TYPE_LABELS[type],
-      question,
-      options: opts,
-      correct_index: opts.indexOf(correct),
-      explanation,
-      explanations: explanations.slice(0, 4),
-    };
-  }
-
-  // --- 1. DEFINITION questions ---
-  // Uses the node's own definition/description
-  if (node.description) {
-    const correct = `${node.title}, ${node.description}`;
-    const wrong = take(rng, d.fiber_types, 3).map((w) => `${node.title}, ${w}`);
-    questions.push(makeQ(
-      "definition",
-      `"${node.title}" kavramı için aşağıdaki tanımlardan hangisi doğrudur?`,
-      correct,
-      wrong,
-      `"${node.title}" tanımı: ${node.description} Diğer seçenekler, ${node.title} kavramının farklı sınıflandırmalarını yanlış temsil etmektedir.`,
-      [
-        `A) Doğru: ${node.description}`,
-        `B) Yanlış: ${wrong[0]} — ${node.title} bu kategoriye girmez.`,
-        `C) Yanlış: ${wrong[1]} — ${node.title} bu sınıflandırmaya uymaz.`,
-        `D) Yanlış: ${wrong[2]} — ${node.title} bu tanıma dahil değildir.`,
-      ],
-    ));
-  }
-
-  // Definition questions from children
-  for (const child of children.slice(0, 3)) {
-    if (!child.description) continue;
-    const correct = `${child.title}: ${child.description}`;
-    const wrongSiblings = siblings.filter((s) => s.id !== child.id && s.description).slice(0, 3);
-    if (wrongSiblings.length < 3) continue;
-    const wrong = wrongSiblings.map((s) => `${s.title}: ${s.description}`);
-    questions.push(makeQ(
-      "definition",
-      `"${child.title}" için aşağıdaki tanımlardan hangisi doğrudur?`,
-      correct,
-      wrong,
-      `"${child.title}" tanımı: ${child.description}. Diğer seçenekler, aynı kategorideki diğer konuların tanımlarıdır ve "${child.title}" için yanlıştır.`,
-      [
-        `Doğru: ${child.description}`,
-        ...wrong.map((w, i) => `Yanlış: Bu, "${wrongSiblings[i].title}" konusunun tanımıdır.`),
-      ],
-    ));
-  }
-
-  // --- 2. CLASSIFICATION questions ---
-  if (children.length >= 3) {
-    const target = children[0];
-    const correct = `"${target.title}" konusu "${node.title}" kategorisine aittir`;
-    const wrongCats = take(rng, profile.keywords, 3).map((k) => `"${target.title}" konusu "${k}" kategorisine aittir`);
-    questions.push(makeQ(
-      "classification",
-      `"${target.title}" konusu aşağıdaki kategorilerden hangisine aittir?`,
-      correct,
-      wrongCats,
-      `"${target.title}", "${node.title}" altında sınıflandırılır. Diğer seçenekler farklı kategorilerdir ve bu konu için yanlıştır.`,
-      [
-        `Doğru: ${target.title}, ${node.title} kategorisindedir.`,
-        ...wrongCats.map((w, i) => `Yanlış: ${profile.keywords[i]} farklı bir kategoridir.`),
-      ],
-    ));
-  }
-
-  // --- 3. TRUE/FALSE questions ---
-  if (node.description) {
-    const correctTrue = `"${node.title}" için verilen tanım doğrudur: ${node.description}`;
-    const wrongSibling = siblings.find((s) => s.description && s.id !== node.id);
-    if (wrongSibling) {
-      const correctFalse = `"${node.title}" için verilen tanım yanlıştır: ${wrongSibling.description} (bu tanım "${wrongSibling.title}" konusuna aittir)`;
-      const neutralWrong = take(rng, d.fiber_types, 2).map((w) => `"${node.title}" için verilen tanım yanlıştır: ${w}`);
-      questions.push(makeQ(
-        "true_false",
-        `"${node.title}" ile ilgili aşağıdaki ifadelerden hangisi doğrudur?`,
-        correctTrue,
-        [correctFalse, ...neutralWrong],
-        `Doğru ifade: ${node.description}. Diğer ifadeler ya yanlış tanım içerir ya da farklı konuya aittir.`,
-        [
-          `Doğru: ${node.description}`,
-          `Yanlış: ${wrongSibling.description} ifadesi "${wrongSibling.title}" için geçerlidir.`,
-          `Yanlış: ${neutralWrong[0]}`,
-          `Yanlış: ${neutralWrong[1]}`,
-        ],
-      ));
-    }
-  }
-
-  // --- 4. COMPARISON questions ---
-  if (children.length >= 2) {
-    const a = children[0];
-    const b = children[1];
-    const correct = `"${a.title}" ve "${b.title}" aynı kategoride (${node.title}) farklı alt konulardır`;
-    const wrong = [
-      `"${a.title}" ve "${b.title}" aynı alt konunun farklı versiyonlarıdır`,
-      `"${a.title}" ve "${b.title}" farklı modüllerde yer alır`,
-      `"${a.title}" ve "${b.title}" arasında hiçbir ilişki yoktur`,
-    ];
-    questions.push(makeQ(
-      "comparison",
-      `"${a.title}" ve "${b.title}" arasındaki ilişki için hangisi doğrudur?`,
-      correct,
-      wrong,
-      `Her ikisi de "${node.title}" kategorisinin alt konularıdır. Diğer seçenekler yanlış ilişki kurar.`,
-      [
-        `Doğru: İkisi de ${node.title} altında sınıflandırılır.`,
-        `Yanlış: Farklı alt konulardır, aynı konunun versiyonları değil.`,
-        `Yanlış: Aynı modülde yer alırlar.`,
-        `Yanlış: Aynı kategoride oldukları için ilişki mevcuttur.`,
-      ],
-    ));
-  }
-
-  // --- 5. APPLICATION questions ---
-  for (const app of profile.applications.slice(0, 2)) {
-    const correct = `${node.title}, ${app} alanında kullanılır`;
-    const wrongApps = profile.applications.filter((a) => a !== app);
-    const wrong = take(rng, wrongApps.length >= 3 ? wrongApps : [...wrongApps, ...d.application_areas], 3).map((a) => `${node.title}, ${a} alanında kullanılır`);
-    questions.push(makeQ(
-      "application",
-      `"${node.title}" aşağıdaki uygulama alanlarından hangisinde kullanılır?`,
-      correct,
-      wrong,
-      `${node.title}, ${app} alanında uygulanır. Diğer seçenekler farklı uygulama alanlarıdır.`,
-      [
-        `Doğru: ${app} alanında kullanımı mevcuttur.`,
-        ...wrong.map((w, i) => `Yanlış: ${w.split(" alanında")[0].replace(node.title + ", ", "")} farklı bir alandır.`),
-      ],
-    ));
-  }
-
-  // --- 6. TECHNICAL PROPERTIES questions ---
-  for (const prop of d.property_values.slice(0, 2)) {
-    const correct = `${node.title} ${prop}`;
-    const wrong = take(rng, d.property_values.filter((p) => p !== prop), 3).map((w) => `${node.title} ${w}`);
-    questions.push(makeQ(
-      "technical_properties",
-      `"${node.title}" için aşağıdaki teknik özellik ifadelerinden hangisi doğrudur?`,
-      correct,
-      wrong,
-      `${node.title} ${prop}. Diğer seçenekler farklı özellik değerleridir.`,
-      [
-        `Doğru: ${prop}`,
-        ...wrong.map((w) => `Yanlış: ${w.replace(node.title + " ", "")} bu konu için geçerli değildir.`),
-      ],
-    ));
-  }
-
-  // --- 7. MANUFACTURING PROCESS questions ---
-  if (profile.processes.length >= 3) {
-    const targetProcess = profile.processes[0];
-    const correct = `${targetProcess}, ${node.title} sürecinin temel adımlarından biridir`;
-    const wrong = take(rng, profile.processes.filter((p) => p !== targetProcess), 3).map((p) => `${p}, farklı bir üretim kategorisine aittir`);
-    questions.push(makeQ(
-      "manufacturing_process",
-      `Aşağıdakilerden hangisi "${node.title}" sürecinin bir adımıdır?`,
-      correct,
-      wrong,
-      `${targetProcess}, ${node.title} kapsamında temel bir süreç adımıdır.`,
-      [
-        `Doğru: ${targetProcess} bu sürecin adımıdır.`,
-        ...wrong.map((w, i) => `Yanlış: ${profile.processes[i + 1] ?? "bu işlem"} farklı bir kategoriye aittir.`),
-      ],
-    ));
-  }
-
-  // --- 8. ADVANTAGES questions ---
-  if (profile.applications.length > 0) {
-    const correct = `${node.title} ürün kalitesini artırır ve ${profile.applications[0]} alanında performansı yükseltir`;
-    const wrong = [
-      `${node.title} ürün kalitesini düşürür ve maliyeti artırır`,
-      `${node.title} sadece düşük kaliteli ürünlerde kullanılır`,
-      `${node.title} hiçbir praktik avantaj sağlamaz`,
-    ];
-    questions.push(makeQ(
-      "advantages",
-      `"${node.title}" için aşağıdaki avantaj ifadelerinden hangisi doğrudur?`,
-      correct,
-      wrong,
-      `${node.title} kaliteyi artırır ve ${profile.applications[0]} alanında kullanılır.`,
-      [
-        `Doğru: Kalite artışı ve ${profile.applications[0]} uygulaması.`,
-        `Yanlış: ${node.title} kaliteyi düşürmez.`,
-        `Yanlış: ${node.title} sadece düşük kaliteli ürünlerle sınırlı değildir.`,
-        `Yanlış: ${node.title} pratik avantajlar sağlar.`,
-      ],
-    ));
-  }
-
-  // --- 9. DISADVANTAGES questions ---
-  {
-    const correct = `${node.title} uygulamasında başlangıç yatırımı ve düzenli kalibrasyon gerekebilir`;
-    const wrong = [
-      `${node.title} hiçbir dezavantajı olmayan mükemmel bir yöntemdir`,
-      `${node.title} yalnızca avantajları vardır ve dezavantajı yoktur`,
-      `${node.title} her koşulda kusursuz çalışır`,
-    ];
-    questions.push(makeQ(
-      "disadvantages",
-      `"${node.title}" için aşağıdaki dezavantaj ifadelerinden hangisi doğrudur?`,
-      correct,
-      wrong,
-      `${node.title} başlangıç yatırımı ve kalibrasyon gerektirir.`,
-      [
-        `Doğru: Yatırım ve kalibrasyon gereksinimi gerçekçidir.`,
-        `Yanlış: Her yöntemin dezavantajı vardır.`,
-        `Yanlış: Dezavantajsız yöntem yoktur.`,
-        `Yanlış: Her koşulda kusursuz çalışma beklenmez.`,
-      ],
-    ));
-  }
-
-  // --- 10. CASE STUDY questions ---
-  {
-    const correct = `${node.title} optimizasyonu ile verimlilik %15-40 artırılabilir`;
-    const wrong = [
-      `${node.title} optimizasyonu verimliliği düşürür`,
-      `${node.title} optimizasyonu hiçbir etkide bulunmaz`,
-      `${node.title} optimizasyonu yalnızca teorik bir kavramdır`,
-    ];
-    questions.push(makeQ(
-      "case_study",
-      `"${node.title}" optimizasyonunun endüstriyel etkisi için hangisi doğrudur?`,
-      correct,
-      wrong,
-      `Endüstri vakaları, ${node.title} optimizasyonunun verimliliği %15-40 artırdığını gösterir.`,
-      [
-        `Doğru: Verimlilik artışı vakalarla doğrulanır.`,
-        `Yanlış: Optimizasyon verimliliği düşürmez.`,
-        `Yanlış: Optimizasyonun etkisi ölçülebilir.`,
-        `Yanlış: Optimizasyon pratik bir süreçtir.`,
-      ],
-    ));
-  }
-
-  // --- Additional questions from children to reach 10+ ---
-  for (const child of children.slice(0, 5)) {
-    if (questions.length >= 15) break;
-    if (!child.description) continue;
-    const correct = `${child.title}, ${node.title} kapsamında incelenen bir alt konudur`;
-    const otherChildren = children.filter((c) => c.id !== child.id && c.description).slice(0, 3);
-    if (otherChildren.length < 3) continue;
-    const wrong = otherChildren.map((c) => `${c.title}, ${node.title} kapsamında incelenen bir alt konudur`);
-    // The question: which of these is NOT a subtopic? (reverse logic)
-    // Actually let's make it: which statement correctly identifies X?
-    questions.push(makeQ(
-      "classification",
-      `"${child.title}" için aşağıdaki ifadelerden hangisi doğrudur?`,
-      `${child.title}: ${child.description}`,
-      otherChildren.map((c) => `${c.title}: ${c.description}`),
-      `"${child.title}" tanımı: ${child.description}. Diğer seçenekler diğer alt konuların tanımlarıdır.`,
-      [
-        `Doğru: ${child.description}`,
-        ...otherChildren.map((c) => `Yanlış: Bu, "${c.title}" konusunun tanımıdır.`),
-      ],
-    ));
-  }
-
-  // Shuffle and take up to 15
-  return shuffle(rng, questions).slice(0, Math.min(15, questions.length));
-}
-
-// ---- Flashcards (20+) ----
-function buildFlashcards(
-  node: ContentNode,
-  children: ContentNode[],
-  profile: DomainProfile,
-): { front: string; back: string }[] {
-  const cards: { front: string; back: string }[] = [];
-  // From children
-  for (const c of children) {
-    cards.push({ front: c.title, back: c.description ?? `${c.title}, ${node.title} kapsamında incelenir.` });
-  }
-  // From keywords
-  for (const k of profile.keywords) {
-    cards.push({ front: k.charAt(0).toUpperCase() + k.slice(1), back: `${k}, ${node.title} bağlamında temel bir kavramdır.` });
-  }
-  // From standards
-  for (const s of profile.standards) {
-    cards.push({ front: s, back: `${s}, ${node.title} ile ilgili önemli bir standarttır.` });
-  }
-  // From processes
-  for (const p of profile.processes) {
-    cards.push({ front: p, back: `${p}, ${node.title} sürecinin temel bir adımıdır.` });
-  }
-  // From applications
-  for (const a of profile.applications) {
-    cards.push({ front: a, back: `${a}, ${node.title} uygulama alanlarından biridir.` });
-  }
-  // Deduplicate by front
-  const seen = new Set<string>();
-  const unique = cards.filter((c) => { if (seen.has(c.front)) return false; seen.add(c.front); return true; });
-  // Ensure 20+
-  while (unique.length < 20) {
-    for (const k of profile.keywords) {
-      const front = `${k} (tanım)`;
-      if (!seen.has(front)) { unique.push({ front, back: `${k}: ${node.title} alanında kullanılan temel kavram.` }); seen.add(front); }
-      if (unique.length >= 20) break;
-    }
-    break;
-  }
-  return unique.slice(0, 24);
-}
-
-// ---- Full lesson builder ----
-function buildLesson(
-  node: ContentNode,
-  path: ContentNode[],
-  children: ContentNode[],
-  siblings: ContentNode[],
-  diff: Difficulty,
-): Record<string, unknown> {
-  const rng = seededRandom(node.slug + ":v3:" + diff);
-  const modulePath = path.map((p) => p.title);
-  const root = path[0];
-  const rootSlug = root?.slug ?? "bilgi-bankasi";
-  const profile = getProfile(rootSlug);
-  const parent = path.length > 1 ? path[path.length - 2] : null;
-  const hasMachines = profile.machines.length > 0;
-  const hasMaterials = profile.materials.length > 0;
-  const hasProcess = profile.processes.length > 0;
-
   const title = node.title;
-  const definition = node.description ?? `${node.title}, ${parent ? parent.title + " kapsamında" : profile.keywords[0] + " alanında"} incelenen temel bir kavramdır.`;
+  const desc = node.description || `${title} konusunun detaylı incelenmesi.`;
+  const distractors = profile.distractors.filter((d) => !d.includes(title.toLowerCase()));
 
-  const introduction = [
-    `${node.title}, ${parent ? parent.title + " başlığı altında" : "bu alanda"} detaylı biçimde ele alınır.`,
-    `Kavram; ${profile.keywords.slice(0, 3).join(", ")} gibi alt başlıklarla ilişkilidir ve ${profile.applications[0] ?? "uygulama alanlarında"} pratik karşılığı bulunur.`,
-    diff === "advanced" ? "İleri düzeyde, konunun teorik çerçevesi, matematiksel modellemesi ve optimizasyon parametreleri birlikte değerlendirilir." : diff === "beginner" ? "Başlangıç seviyesinde, kavramın temel tanımı ve günlük kullanımı ön plandadır." : "Orta seviyede, hem teorik temeller hem de pratik uygulamalar dengeli biçimde sunulur.",
-  ];
+  function addQuestion(q: Partial<QuizQuestion>) {
+    if (!q.question || !q.options || q.options.length < 2) return;
+    const correctIdx = q.correct_index ?? 0;
+    const opts = q.options!;
+    const exps = q.explanations || opts.map((o, i) => (i === correctIdx ? "Bu seçenek doğrudur." : "Bu seçenek yanlıştır."));
+    questions.push({
+      type: q.type!,
+      type_label: q.type_label!,
+      question: q.question!,
+      options: opts,
+      correct_index: correctIdx,
+      explanation: q.explanation || exps[correctIdx],
+      explanations: exps,
+    });
+  }
 
-  const learningObjectives = [
-    `${node.title} kavramını tanımlama ve kapsamını belirleme`,
-    `${node.title} ile ilgili ${profile.keywords.slice(0, 2).join(" ve ")} ilişkilerini açıklama`,
-    hasProcess ? `${node.title} süreç adımlarını sırasıyla tarif etme` : `${node.title} bileşenlerini sınıflandırma`,
-    `${node.title} avantaj ve dezavantajlarını değerlendirme`,
-    hasMachines ? `${node.title} için kullanılan makineleri tanıma` : `${node.title} uygulama alanlarını analiz etme`,
-    diff === "advanced" ? `${node.title} parametre optimizasyonu ve kalite kontrol yöntemlerini uygulama` : `${node.title} için temel kalite kriterlerini uygulama`,
-  ];
-
-  const detailedExplanation = {
-    sections: [
-      {
-        heading: "Kavramsal Çerçeve",
-        paragraphs: [
-          `${node.title}, ${profile.keywords[0]} kavramıyla yakından ilişkilidir ve ${parent ? parent.title + " içinde" : "bu alanda"} sistematik biçimde incelenir.`,
-          `Kavramın temelini ${pick(rng, profile.keywords)} ve ${pick(rng, profile.keywords)} oluşturur.`,
-        ],
-      },
-      {
-        heading: "Sınıflandırma",
-        paragraphs: [`${node.title} birden fazla alt gruba ayrılır:`],
-        items: children.length > 0
-          ? children.slice(0, 6).map((c) => `${c.title}: ${c.description ?? "temel alt kategori"}`)
-          : profile.processes.slice(0, 3).map((p) => `${p}: temel süreç adımı`),
-      },
-      {
-        heading: "Teorik Temeller",
-        paragraphs: [
-          `${node.title} teorik olarak ${pick(rng, ["malzeme bilimi", "mühendislik prensipleri", "fiziksel-kimyasal kurallar", "istatistiksel yöntemler", "ekonomik modeller"])} üzerine kuruludur.`,
-          `Uygulamada ${pick(rng, profile.keywords)} ve ${pick(rng, profile.keywords)} arasındaki denge optimum sonucu verir.`,
-        ],
-      },
+  // 1. Definition
+  addQuestion({
+    type: "definition",
+    type_label: "Tanım",
+    question: `"${title}" aşağıdakilerden hangisi ile en doğru şekilde tanımlanır?`,
+    options: shuffle(rng, [
+      desc,
+      `${distractors[0]}, bir üretim yöntemidir`,
+      `${distractors[1]}, bir analiz tekniğidir`,
+      `${distractors[2] || distractors[0]}, bir yönetim aracıdır`,
+    ]),
+    correct_index: 0,
+    explanations: [
+      `"${title}" tanımı: ${desc}`,
+      `${distractors[0]} ${title} ile ilgili bir tanım değildir; farklı bir alana aittir.`,
+      `${distractors[1]} ${title} kapsamında yer almaz.`,
+      `${distractors[2] || distractors[0]} bu konuyla ilgili değildir.`,
     ],
-  };
+  });
+  // fix correct_index after shuffle
+  const q1Correct = questions[questions.length - 1];
+  q1Correct.correct_index = q1Correct.options.findIndex((o) => o === desc);
+  q1Correct.explanations = q1Correct.options.map((o) => (o === desc ? `"${title}" tanımı: ${desc}` : `Bu tanım "${title}" için geçerli değildir; farklı bir kavrama aittir.`));
 
-  const scientificInfo = {
-    paragraphs: [
-      `${node.title}, ${pick(rng, ["polimer kimyası", "malzeme bilimi", "termodinamik", "reoloji", "istatistiksel analiz", "ekonomik teori"])} prensiplerine dayanır.`,
-      diff === "advanced" ? "Moleküler/parametrik düzeyde, yapısal özellikler ve değişkenler arası ilişkiler performansı belirler." : "Temel düzeyde, ana parametrelerin anlaşılması yeterlidir.",
-    ],
-    formulas: diff === "advanced"
-      ? [{ formula: "σ = F / A", description: "Çekme mukavemeti" }, { formula: "ε = (ΔL / L₀) × 100", description: "Uzama yüzdesi" }]
-      : [{ formula: "Verim = (Çıktı / Girdi) × 100", description: "Süreç verimi" }],
-    parameters: [
-      { name: "Sıcaklık", unit: "°C", typical: pick(rng, ["20-25", "100-150", "180-220"]) },
-      { name: "Nem", unit: "%", typical: pick(rng, ["40-55", "60-65", "65-75"]) },
-    ],
-  };
+  // 2. Classification
+  if (children.length >= 2) {
+    const correctChild = children[0].title;
+    const wrongChildren = siblings.filter((s) => s.id !== node.id).slice(0, 3).map((s) => s.title);
+    while (wrongChildren.length < 3) wrongChildren.push(distractors[wrongChildren.length] || `Diğer kategori ${wrongChildren.length + 1}`);
+    const opts = shuffle(rng, [correctChild, ...wrongChildren]);
+    const correctIdx = opts.findIndex((o) => o === correctChild);
+    addQuestion({
+      type: "classification",
+      type_label: "Sınıflandırma",
+      question: `"${title}" kapsamında aşağıdaki alt konulardan hangisi yer alır?`,
+      options: opts,
+      correct_index: correctIdx,
+      explanations: opts.map((o) => (o === correctChild ? `"${correctChild}", "${title}" konusunun bir alt başlığıdır.` : `"${o}" "${title}" kapsamında yer almaz; farklı bir konuya aittir.`)),
+    });
+  }
 
-  const productionProcess = hasProcess
-    ? profile.processes.slice(0, 6).map((p, i) => ({
-        step: i + 1, title: p,
-        description: `${p} aşaması, ${node.title.toLowerCase()} sürecinin ${i + 1}. adımıdır.`,
-        parameters: [{ name: "Sıcaklık", value: pick(rng, ["20°C", "120°C", "180°C"]) }],
-      }))
-    : [];
+  // 3. True/False (4 statements: 2 true, 2 false)
+  const true1 = `${title} sürecinde ${profile.properties[0]} parametresi kritik öneme sahiptir.`;
+  const true2 = `${title}, ${profile.standards[0]} standardı çerçevesinde değerlendirilir.`;
+  const false1 = `${title} sürecinde ${distractors[0]} kullanılır.`;
+  const false2 = `${title}, ${distractors[1] || distractors[0]} ile aynı anlama gelir.`;
+  const tfOpts = shuffle(rng, [true1, true2, false1, false2]);
+  const tfCorrectIdx = tfOpts.findIndex((o) => o === true1);
+  addQuestion({
+    type: "true_false",
+    type_label: "Doğru-Yanlış",
+    question: `"${title}" ile ilgili aşağıdaki ifadelerden hangisi doğrudur?`,
+    options: tfOpts,
+    correct_index: tfCorrectIdx,
+    explanations: tfOpts.map((o) => {
+      if (o === true1) return `Doğru: ${title} sürecinde ${profile.properties[0]} kritik bir parametredir.`;
+      if (o === true2) return `Doğru: ${title}, ${profile.standards[0]} standardına göre değerlendirilir.`;
+      if (o === false1) return `Yanlış: ${title} sürecinde ${distractors[0]} kullanılmaz.`;
+      return `Yanlış: ${title} ile ${distractors[1] || distractors[0]} aynı anlamda değildir.`;
+    }),
+  });
 
-  const properties = [
-    { property: "Mukavemet", value: pick(rng, ["Yüksek", "Orta", "Düşük-Orta"]), unit: "cN/tex", note: "Kopma dayanımı" },
-    { property: "Uzama", value: pick(rng, ["İyi", "Orta", "Sınırlı"]), unit: "%", note: "Kopma uzaması" },
-    { property: "Maliyet", value: pick(rng, ["Orta", "Yüksek", "Düşük-Orta"]), unit: "₺/birim", note: "Birim üretim" },
-  ];
+  // 4. Comparison
+  if (siblings.length >= 2) {
+    const sib = siblings.find((s) => s.id !== node.id);
+    if (sib) {
+      const correct = `${title} ile ${sib.title} farklı süreçleri ifade eder`;
+      const wrong1 = `${title} ve ${sib.title} aynı anlama gelir`;
+      const wrong2 = `${title}, ${sib.title}'nin bir alt basamağıdır`;
+      const wrong3 = `${sib.title}, ${title}'nin bir parçasıdır`;
+      const opts = shuffle(rng, [correct, wrong1, wrong2, wrong3]);
+      const correctIdx = opts.findIndex((o) => o === correct);
+      addQuestion({
+        type: "comparison",
+        type_label: "Karşılaştırma",
+        question: `"${title}" ve "${sib.title}" arasındaki ilişki için hangisi doğrudur?`,
+        options: opts,
+        correct_index: correctIdx,
+        explanations: opts.map((o) => (o === correct ? `${title} ve ${sib.title} aynı kapsamda farklı süreçlerdir.` : `Bu ifade yanlıştır: ${title} ve ${sib.title} farklı konulardır, eş anlamlı veya alt basamak değildir.`)),
+      });
+    }
+  }
 
-  const advantages = [
-    `${node.title} ürün kalitesini doğrudan artırır`,
-    `${profile.applications[0] ?? "uygulama"} alanında yüksek performans sağlar`,
-    "Standart süreçlerle uyumludur",
-    "Ölçeklenebilir ve endüstriyel üretime uygundur",
-  ];
-  const disadvantages = [
-    "Başlangıç yatırımı gerektirebilir",
-    "Belirli kalite standartlarına uyum zorunludur",
-    "Uygun olmayan koşullarda performans düşer",
-    "Düzenli bakım ve kalibrasyon gerektirir",
-  ];
-  const applications = profile.applications.map((a) => ({ sector: a, use: `${node.title} uygulaması ${a.toLowerCase()} alanında kullanılır.` }));
-  const industryExamples = [
-    { company: pick(rng, ["Anadolu Tekstil", "Marmara Konfeksiyon", "Ege Moda"]) + " A.Ş.", scenario: `${node.title.toLowerCase()} endüstriyel uygulaması.`, result: `Verimlilik %${Math.floor(rng() * 25) + 15} arttı.` },
-  ];
-  const caseStudies = [
-    { title: `Vaka: ${node.title} Optimizasyonu`, problem: "Düşük verimlilik.", solution: "Parametre optimizasyonu.", result: `Verim %${Math.floor(rng() * 30) + 15} arttı.` },
-  ];
-  const comparisonTables = {
-    types: { title: `${node.title} — Tip Karşılaştırması`, headers: ["Özellik", "Tip A", "Tip B", "Tip C"], rows: [["Performans", "Yüksek", "Orta", "Düşük"], ["Maliyet", "Düşük", "Orta", "Yüksek"]] },
-    pros_cons: { title: "Avantaj/Dezavantaj", headers: ["Avantajlar", "Dezavantajlar"], rows: advantages.slice(0, 3).map((a, i) => [a, disadvantages[i] ?? "—"]) },
-  };
-  const importantNotes = [`${node.title} uygulamasında parametre kontrolü her partide yapılmalıdır.`, `Standartlara uyum zorunludur.`];
-  const commonMistakes = [
-    { mistake: "Parametre kontrolünün atlanması", correction: "Her üretim öncesi parametreleri doğrulayın." },
-    { mistake: "Düzensiz kalibrasyon", correction: "Aylık kalibrasyon takvimi uygulayın." },
-  ];
-  const bestPractices = ["SOP takip edin.", "Düzenli kalibrasyon yapın.", "Parti belgelendirin."];
-  const faqs = [
-    { q: `${node.title} nedir?`, a: definition },
-    { q: `${node.title} hangi alanda kullanılır?`, a: profile.applications.slice(0, 3).join(", ") },
-    { q: `${node.title} için hangi standartlar geçerlidir?`, a: profile.standards.slice(0, 3).join(", ") },
-  ];
-  const keyTerms = children.length > 0
-    ? children.slice(0, 10).map((c) => ({ term: c.title, definition: c.description ?? `${c.title}, ${node.title} kapsamında incelenir.` }))
-    : profile.keywords.slice(0, 8).map((k) => ({ term: k.charAt(0).toUpperCase() + k.slice(1), definition: `${k}, ${node.title} bağlamında temel bir kavramdır.` }));
-  const summary = {
-    paragraphs: [`${node.title} kavramı; tanımı, sınıflandırması ve uygulama alanları ile ele alınmıştır.`],
-    takeaways: [`${node.title} temel tanımı`, hasProcess ? `${node.title} süreç adımları` : `${node.title} sınıflandırması`, `${node.title} avantaj/dezavantajları`],
-  };
-  const references = profile.references;
-  const relatedLessons = siblings.filter((s) => s.id !== node.id).slice(0, 6).map((s) => ({ title: s.title, slug: s.slug, relation: "Aynı kategori" }));
-  const visuals = [
-    { type: "Süreç Akış Diyagramı", title: `${node.title} — Süreç Akışı`, description: `${node.title} adımlarını gösteren dikey akış diyagramı.`, layout: "vertical-flow", prompt: `Dikey akış: ${node.title} süreci. Profesyonel teknik çizim.` },
-    { type: "Kesit Görünümü", title: `${node.title} — Kesit Şeması`, description: "Ürün/yapı kesit şeması.", layout: "cross-section", prompt: `Teknik kesit: ${node.title}. Etiketli katmanlar.` },
-    { type: "Performans Grafiği", title: `${node.title} — Performans Eğrisi`, description: "Parametre-performans çizgi grafiği.", layout: "line-chart", prompt: `Çizgi grafik: ${node.title} performans.` },
-    { type: "Karşılaştırma Tablosu", title: `${node.title} — Tip Karşılaştırması`, description: "Tip karşılaştırma tablosu.", layout: "comparison-table", prompt: `Karşılaştırma tablosu: ${node.title}.` },
-    ...(hasMachines ? [{ type: "Makine İllüstrasyonu", title: `${node.title} — Makine Şeması`, description: `${profile.machines[0]} şematik görünümü.`, layout: "machine-diagram", prompt: `Makine şeması: ${profile.machines[0]}.` }] : []),
-  ];
+  // 5. Application
+  const correctApp = profile.applications[0];
+  const wrongApps = distractors.slice(0, 3);
+  const appOpts = shuffle(rng, [correctApp, ...wrongApps]);
+  const appCorrectIdx = appOpts.findIndex((o) => o === correctApp);
+  addQuestion({
+    type: "application",
+    type_label: "Uygulama",
+    question: `"${title}" aşağıdaki uygulama alanlarından hangisinde kullanılır?`,
+    options: appOpts,
+    correct_index: appCorrectIdx,
+    explanations: appOpts.map((o) => (o === correctApp ? `${correctApp}, ${title} uygulamasının kullanıldığı bir alandır.` : `${o}, ${title} uygulama alanı değildir; farklı bir disipline aittir.`)),
+  });
 
-  // QUIZ — content-driven, 10+ types
-  const quiz = buildQuiz(node, children, siblings, profile, diff);
+  // 6. Technical properties
+  const correctProp = profile.properties[0];
+  const wrongProps = distractors.slice(0, 3);
+  const propOpts = shuffle(rng, [correctProp, ...wrongProps]);
+  const propCorrectIdx = propOpts.findIndex((o) => o === correctProp);
+  addQuestion({
+    type: "technical_properties",
+    type_label: "Teknik Özellik",
+    question: `"${title}" için aşağıdaki teknik özellik ifadelerinden hangisi doğrudur?`,
+    options: propOpts,
+    correct_index: propCorrectIdx,
+    explanations: propOpts.map((o) => (o === correctProp ? `${correctProp}, ${title} kapsamında ölçülen temel bir teknik parametredir.` : `${o}, ${title} için bir teknik parametre değildir.`)),
+  });
 
-  // FLASHCARDS — 20+
-  const flashcards = buildFlashcards(node, children, profile);
+  // 7. Manufacturing process
+  const correctProc = profile.processes[0];
+  const wrongProcs = distractors.slice(0, 3);
+  const procOpts = shuffle(rng, [correctProc, ...wrongProcs]);
+  const procCorrectIdx = procOpts.findIndex((o) => o === correctProc);
+  addQuestion({
+    type: "manufacturing_process",
+    type_label: "Üretim Süreci",
+    question: `"${title}" üretim sürecinde aşağıdaki adımlardan hangisi yer alır?`,
+    options: procOpts,
+    correct_index: procCorrectIdx,
+    explanations: procOpts.map((o) => (o === correctProc ? `${correctProc}, ${title} sürecinin temel adımlarındandır.` : `${o}, ${title} sürecinde yer almaz.`)),
+  });
 
-  const tags = [node.title, ...(parent ? [parent.title] : []), ...(root ? [root.title] : []), ...profile.keywords.slice(0, 3)];
+  // 8. Advantages
+  const correctAdv = `${profile.properties[0]} bakımından yüksek performans`;
+  const wrongAdv = distractors.slice(0, 3);
+  const advOpts = shuffle(rng, [correctAdv, ...wrongAdv]);
+  const advCorrectIdx = advOpts.findIndex((o) => o === correctAdv);
+  addQuestion({
+    type: "advantages",
+    type_label: "Avantajlar",
+    question: `"${title}" aşağıdaki avantajlardan hangisini sağlar?`,
+    options: advOpts,
+    correct_index: advCorrectIdx,
+    explanations: advOpts.map((o) => (o === correctAdv ? `${title}, ${profile.properties[0]} açısından üstünlük sağlar.` : `${o}, ${title} avantajlarından biri değildir.`)),
+  });
 
-  return {
-    slug: node.slug, title, definition,
-    module_root: rootSlug, module_root_title: root?.title ?? "",
-    module_path: modulePath, difficulty: diff, difficulty_label: DIFF_LABEL[diff],
-    estimated_minutes: DIFF_MINUTES[diff], tags, generated_by: "deterministic-v3",
-    introduction, learning_objectives: learningObjectives,
-    detailed_explanation: detailedExplanation, scientific_info: scientificInfo,
-    production_process: productionProcess, properties, advantages, disadvantages,
-    applications, industry_examples: industryExamples, case_studies: caseStudies,
-    comparison_tables: comparisonTables, important_notes: importantNotes,
-    common_mistakes: commonMistakes, best_practices: bestPractices, faqs,
-    key_terms: keyTerms, summary, references, related_lessons: relatedLessons,
-    visuals, quiz, flashcards,
-  };
+  // 9. Disadvantages
+  const correctDis = `${profile.machines[0]} yatırım maliyeti`;
+  const wrongDis = distractors.slice(0, 3);
+  const disOpts = shuffle(rng, [correctDis, ...wrongDis]);
+  const disCorrectIdx = disOpts.findIndex((o) => o === correctDis);
+  addQuestion({
+    type: "disadvantages",
+    type_label: "Dezavantajlar",
+    question: `"${title}" ile ilgili aşağıdaki dezavantajlardan hangisi doğrudur?`,
+    options: disOpts,
+    correct_index: disCorrectIdx,
+    explanations: disOpts.map((o) => (o === correctDis ? `${profile.machines[0]} yatırım maliyeti, ${title} uygulamasının bir dezavantajıdır.` : `${o}, ${title} dezavantajlarından biri değildir.`)),
+  });
+
+  // 10. Case study
+  const correctCase = `${profile.applications[0]} sektöründe ${profile.properties[0]} iyileştirilmiştir`;
+  const wrongCases = distractors.slice(0, 3);
+  const caseOpts = shuffle(rng, [correctCase, ...wrongCases]);
+  const caseCorrectIdx = caseOpts.findIndex((o) => o === correctCase);
+  addQuestion({
+    type: "case_study",
+    type_label: "Vaka Çalışması",
+    question: `"${title}" uygulamasının sonuçlarından hangisi bir vaka çalışmasında beklenir?`,
+    options: caseOpts,
+    correct_index: caseCorrectIdx,
+    explanations: caseOpts.map((o) => (o === correctCase ? `${profile.applications[0]} alanında ${title} uygulaması ${profile.properties[0]} iyileştirmesi sağlar.` : `${o}, ${title} vaka sonuçlarından biri değildir.`)),
+  });
+
+  // Additional questions from children definitions
+  children.slice(0, 5).forEach((child) => {
+    if (questions.length >= 15) return;
+    const correct = child.title;
+    const wrong = shuffle(rng, distractors).slice(0, 3);
+    while (wrong.length < 3) wrong.push(distractors[wrong.length % distractors.length]);
+    const opts = shuffle(rng, [correct, ...wrong]);
+    const correctIdx = opts.findIndex((o) => o === correct);
+    addQuestion({
+      type: "definition",
+      type_label: "Tanım",
+      question: `"${title}" kapsamında "${child.description || child.title}" ifadesi hangisini tanımlar?`,
+      options: opts,
+      correct_index: correctIdx,
+      explanations: opts.map((o) => (o === correct ? `${child.title}, ${title} konusunun bir alt başlığıdır.` : `${o}, ${title} alt başlığı değildir.`)),
+    });
+  });
+
+  // Extra: materials question
+  if (questions.length < 12 && profile.materials.length >= 4) {
+    const correctMat = profile.materials[0];
+    const wrongMats = profile.distractors.slice(0, 3);
+    const matOpts = shuffle(rng, [correctMat, ...wrongMats]);
+    const matCorrectIdx = matOpts.findIndex((o) => o === correctMat);
+    addQuestion({
+      type: "technical_properties",
+      type_label: "Teknik Özellik",
+      question: `"${title}" sürecinde aşağıdaki malzemelerden hangisi kullanılır?`,
+      options: matOpts,
+      correct_index: matCorrectIdx,
+      explanations: matOpts.map((o) => (o === correctMat ? `${correctMat}, ${title} sürecinde kullanılan temel bir malzemedir.` : `${o}, ${title} sürecinde kullanılan bir malzeme değildir.`)),
+    });
+  }
+
+  // Extra: standards question
+  if (questions.length < 13 && profile.standards.length >= 2) {
+    const correctStd = profile.standards[0];
+    const wrongStds = [...profile.distractors.slice(0, 3)];
+    while (wrongStds.length < 3) wrongStds.push(profile.distractors[wrongStds.length % profile.distractors.length]);
+    const stdOpts = shuffle(rng, [correctStd, ...wrongStds]);
+    const stdCorrectIdx = stdOpts.findIndex((o) => o === correctStd);
+    addQuestion({
+      type: "technical_properties",
+      type_label: "Teknik Özellik",
+      question: `"${title}" için hangi standart referans alınır?`,
+      options: stdOpts,
+      correct_index: stdCorrectIdx,
+      explanations: stdOpts.map((o) => (o === correctStd ? `${correctStd}, ${title} kapsamında referans alınan standarttır.` : `${o}, ${title} için referans standart değildir.`)),
+    });
+  }
+
+  // Extra: glossary question
+  if (questions.length < 14 && Object.keys(profile.glossary).length >= 2) {
+    const glossaryEntries = Object.entries(profile.glossary);
+    const [term, def] = glossaryEntries[0];
+    const wrongDefs = glossaryEntries.slice(1, 4).map(([t, d]) => d);
+    while (wrongDefs.length < 3) wrongDefs.push(distractors[wrongDefs.length] || `Tanım ${wrongDefs.length + 1}`);
+    const glossOpts = shuffle(rng, [def, ...wrongDefs]);
+    const glossCorrectIdx = glossOpts.findIndex((o) => o === def);
+    addQuestion({
+      type: "definition",
+      type_label: "Tanım",
+      question: `"${term}" teriminin doğru tanımı hangisidir?`,
+      options: glossOpts,
+      correct_index: glossCorrectIdx,
+      explanations: glossOpts.map((o) => (o === def ? `"${term}" tanımı: ${def}` : `Bu tanım "${term}" için geçerli değildir.`)),
+    });
+  }
+
+  return questions.slice(0, 15);
 }
 
-// ---- Optional AI layer ----
-async function buildWithAI(node: ContentNode, path: ContentNode[], children: ContentNode[], siblings: ContentNode[], diff: Difficulty): Promise<Record<string, unknown> | null> {
-  const apiKey = Deno.env.get("OPENAI_API_KEY");
-  if (!apiKey) return null;
-  const root = path[0];
-  const rootSlug = root?.slug ?? "bilgi-bankasi";
-  const profile = getProfile(rootSlug);
-  const modulePath = path.map((p) => p.title);
+// ─── Flashcards ─────────────────────────────────────────────────
+function buildFlashcards(node: any, profile: DomainProfile, children: any[], rng: () => number): any[] {
+  const cards: any[] = [];
+  const title = node.title;
 
-  const prompt = `Sen üniversite ders kitabı yazarısın. ${profile.keywords[0].toUpperCase()} alanında uzmansın. Türkçe yaz. SADECE JSON döndür.
+  cards.push({ front: `${title} nedir?`, back: node.description || `${title}, ${profile.moduleSlug} alanının bir konusudur.` });
 
-KURALLAR:
-- Meta ifadeler yok ("Bu ders...", "AI tarafından..." vb. yasak).
-- Sadece ${root?.title ?? "bu alan"} modülü ile ilgili içerik.
-- Quiz soruları SADECE ders içeriğinden üretilmeli. Rastgele kelime yok.
-- Her quiz sorusu: 1 doğru + 3 inandırıcı yanlış cevap. "Yukarıdakilerin tümü/hiçbiri" yasak.
-- Her soru için açıklama: doğru neden doğru, yanlışlar neden yanlış.
-- 10-15 quiz sorusu, 20+ flashcard.
+  profile.keywords.slice(0, 6).forEach((k) => {
+    cards.push({ front: `${k} ne demektir?`, back: profile.glossary[k] || `${k}, ${profile.moduleSlug} alanında kullanılan bir terimdir.` });
+  });
 
-Konu: ${node.title}
-Açıklama: ${node.description ?? ""}
-Alt başlıklar: ${children.map((c) => c.title).join(", ") || "yok"}
+  profile.properties.slice(0, 5).forEach((p) => {
+    cards.push({ front: `${p} nasıl ölçülür?`, back: `${p}, ${profile.standards[0]} standardına uygun olarak ölçülür.` });
+  });
 
-JSON yapısı:
-{
-  "introduction": string[],
-  "learning_objectives": string[],
-  "detailed_explanation": {"sections": [{"heading": string, "paragraphs": string[], "items": string[]}]},
-  "scientific_info": {"paragraphs": string[], "formulas": [{"formula": string, "description": string}], "parameters": [{"name": string, "unit": string, "typical": string}]},
-  "production_process": [{"step": number, "title": string, "description": string, "parameters": [{"name": string, "value": string}]}],
-  "properties": [{"property": string, "value": string, "unit": string, "note": string}],
-  "advantages": string[], "disadvantages": string[],
-  "applications": [{"sector": string, "use": string}],
-  "industry_examples": [{"company": string, "scenario": string, "result": string}],
-  "case_studies": [{"title": string, "problem": string, "solution": string, "result": string}],
-  "comparison_tables": {"types": {"title": string, "headers": string[], "rows": string[][]}, "pros_cons": {"title": string, "headers": string[], "rows": string[][]}},
-  "important_notes": string[],
-  "common_mistakes": [{"mistake": string, "correction": string}],
-  "best_practices": string[],
-  "faqs": [{"q": string, "a": string}],
-  "key_terms": [{"term": string, "definition": string}],
-  "summary": {"paragraphs": string[], "takeaways": string[]},
-  "references": [{"title": string, "author": string, "year": string}],
-  "quiz": [{"type": string, "type_label": string, "question": string, "options": string[4], "correct_index": number, "explanation": string, "explanations": string[4]}],
-  "flashcards": [{"front": string, "back": string}]
+  profile.processes.slice(0, 5).forEach((p) => {
+    cards.push({ front: `${p} adımının amacı nedir?`, back: `${p}, ${title} sürecinde kalite ve verimlilik sağlamak için uygulanır.` });
+  });
+
+  profile.standards.slice(0, 4).forEach((s) => {
+    cards.push({ front: `${s} standardı neyi kapsar?`, back: `${s}, ${title} kapsamında kalite kriterlerini tanımlar.` });
+  });
+
+  children.slice(0, 4).forEach((c) => {
+    cards.push({ front: `${c.title} nedir?`, back: c.description || `${c.title}, ${title} konusunun alt başlığıdır.` });
+  });
+
+  return shuffle(rng, cards).slice(0, 24);
 }
-Sadece JSON.`;
+
+// ─── Main handler ───────────────────────────────────────────────
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 200, headers: corsHeaders });
+  }
 
   try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    const { slug, difficulty = "intermediate", force = false } = await req.json();
+
+    if (!slug) {
+      return new Response(JSON.stringify({ error: "slug gereklidir" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    // Fetch node
+    const nodeRes = await fetch(`${supabaseUrl}/rest/v1/content_nodes?slug=eq.${slug}&select=*`, {
+      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+    });
+    const nodeData = await nodeRes.json();
+    if (!nodeData || nodeData.length === 0) {
+      return new Response(JSON.stringify({ error: "Ders bulunamadı" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const node = nodeData[0];
+
+    // Check cache unless force
+    if (!force) {
+      const cacheRes = await fetch(
+        `${supabaseUrl}/rest/v1/generated_content?node_slug=eq.${slug}&content_type=eq.full_lesson&difficulty=eq.${difficulty}&select=payload&order=created_at.desc&limit=1`,
+        { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+      );
+      const cacheData = await cacheRes.json();
+      if (cacheData && cacheData.length > 0) {
+        return new Response(
+          JSON.stringify({ cached: true, content: cacheData[0].payload }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Fetch all nodes for hierarchy
+    const allRes = await fetch(`${supabaseUrl}/rest/v1/content_nodes?select=*&order=position.asc`, {
+      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+    });
+    const allNodes = await allRes.json();
+
+    const children = allNodes.filter((n: any) => n.parent_id === node.id);
+    const siblings = node.parent_id ? allNodes.filter((n: any) => n.parent_id === node.parent_id) : [];
+    const moduleSlug = findModuleSlug(node, allNodes);
+    const profile = getProfile(moduleSlug);
+
+    const seed = slugToSeed(slug) + (difficulty === "beginner" ? 1 : difficulty === "advanced" ? 3 : 2);
+    const rng = seededRandom(seed);
+
+    const sections = buildSections(node, profile, children, siblings, rng);
+    const quiz = buildQuiz(node, profile, children, siblings, rng);
+    const flashcards = buildFlashcards(node, profile, children, rng);
+
+    const content = {
+      node_slug: slug,
+      node_title: node.title,
+      difficulty,
+      module: moduleSlug,
+      sections,
+      quiz,
+      flashcards,
+      generated_at: new Date().toISOString(),
+    };
+
+    // Save to cache
+    await fetch(`${supabaseUrl}/rest/v1/generated_content`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "system", content: "Üniversite ders kitabı yazarı. Sadece JSON. Meta ifade yok." }, { role: "user", content: prompt }],
-        temperature: 0.7, response_format: { type: "json_object" },
+        node_slug: slug,
+        node_id: node.id,
+        content_type: "full_lesson",
+        difficulty,
+        payload: content,
       }),
     });
-    if (!res.ok) { console.error("OpenAI error:", res.status); return null; }
-    const data = await res.json();
-    const content = data?.choices?.[0]?.message?.content;
-    if (!content) return null;
-    const parsed = JSON.parse(content);
-    parsed.slug = node.slug; parsed.title = node.title;
-    parsed.definition = node.description ?? parsed.title;
-    parsed.module_root = rootSlug; parsed.module_root_title = root?.title ?? "";
-    parsed.module_path = modulePath; parsed.difficulty = diff;
-    parsed.difficulty_label = DIFF_LABEL[diff]; parsed.estimated_minutes = DIFF_MINUTES[diff];
-    parsed.related_lessons = siblings.filter((s) => s.id !== node.id).slice(0, 6).map((s) => ({ title: s.title, slug: s.slug, relation: "Aynı kategori" }));
-    parsed.generated_by = "ai-openai";
-    return parsed;
-  } catch (err) { console.error("AI failed:", err instanceof Error ? err.message : String(err)); return null; }
-}
 
-Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
-  if (req.method !== "POST") return fail("Sadece POST.", 405);
-
-  try {
-    const body = await req.json().catch(() => null);
-    if (!body || typeof body !== "object") return fail("Geçersiz istek.");
-    const b = body as Record<string, unknown>;
-    const slug = b.slug;
-    const difficulty = (b.difficulty ?? "intermediate") as Difficulty;
-    const force = b.force === true;
-    const use_ai = b.use_ai !== false;
-    if (typeof slug !== "string" || !slug.trim()) return fail("slug gerekli.");
-    if (!["beginner", "intermediate", "advanced"].includes(difficulty)) return fail("Geçersiz difficulty.");
-
-    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
-
-    const { data: node, error: nodeErr } = await supabase
-      .from("content_nodes").select("id, parent_id, type, title, slug, description, position").eq("slug", slug).maybeSingle();
-    if (nodeErr) throw nodeErr;
-    if (!node) return fail(`'${slug}' bulunamadı.`, 404);
-
-    if (!force) {
-      const { data: cached } = await supabase
-        .from("generated_content").select("payload, updated_at")
-        .eq("node_slug", slug).eq("content_type", "full_lesson").eq("difficulty", difficulty).maybeSingle();
-      if (cached) return ok({ cached: true, generated_at: cached.updated_at, content: cached.payload });
-    }
-
-    const childrenRes = await supabase
-      .from("content_nodes").select("id, parent_id, type, title, slug, description, position")
-      .eq("parent_id", node.id).order("position", { ascending: true });
-    if (childrenRes.error) throw childrenRes.error;
-    const children = (childrenRes.data ?? []) as ContentNode[];
-
-    let siblings: ContentNode[] = [];
-    if (node.parent_id) {
-      const sibRes = await supabase
-        .from("content_nodes").select("id, parent_id, type, title, slug, description, position")
-        .eq("parent_id", node.parent_id).neq("id", node.id).order("position", { ascending: true });
-      if (!sibRes.error) siblings = (sibRes.data ?? []) as ContentNode[];
-    }
-
-    const path: ContentNode[] = [node];
-    const seen = new Set<string>([node.id]);
-    let cur: ContentNode | null = node;
-    while (cur && cur.parent_id) {
-      const { data: parent } = await supabase
-        .from("content_nodes").select("id, parent_id, type, title, slug, description, position").eq("id", cur.parent_id).maybeSingle();
-      if (!parent || seen.has(parent.id)) break;
-      seen.add(parent.id); path.unshift(parent); cur = parent;
-    }
-
-    let payload: Record<string, unknown>;
-    let usedAI = false;
-    if (use_ai) {
-      const ai = await buildWithAI(node, path, children, siblings, difficulty);
-      if (ai) { payload = ai; usedAI = true; }
-      else payload = buildLesson(node, path, children, siblings, difficulty);
-    } else {
-      payload = buildLesson(node, path, children, siblings, difficulty);
-    }
-
-    const now = new Date().toISOString();
-    await supabase.from("generated_content").upsert({
-      node_slug: slug, node_id: node.id, content_type: "full_lesson", difficulty, payload, updated_at: now,
-    }, { onConflict: "node_slug,content_type,difficulty" });
-
-    return ok({ cached: false, generated_at: now, generated_by: usedAI ? "ai" : "deterministic", content: payload });
+    return new Response(
+      JSON.stringify({ cached: false, content }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("Engine error:", msg);
-    return fail(`Hata: ${msg}`, 500);
+    return new Response(
+      JSON.stringify({ error: `İçerik üretim hatası: ${err.message}` }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 });

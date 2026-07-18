@@ -22,6 +22,12 @@ export interface ContentNode {
   created_at: string;
 }
 
+export interface NodeWithMeta extends ContentNode {
+  module_root: string;
+  module_root_slug: string;
+  module_root_id: string;
+}
+
 export async function fetchChildren(parentId: string | null): Promise<ContentNode[]> {
   let query = supabase
     .from("content_nodes")
@@ -42,6 +48,16 @@ export async function fetchNode(id: string): Promise<ContentNode | null> {
     .from("content_nodes")
     .select("id, parent_id, type, title, slug, description, position, created_at")
     .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data as ContentNode | null;
+}
+
+export async function fetchNodeBySlug(slug: string): Promise<ContentNode | null> {
+  const { data, error } = await supabase
+    .from("content_nodes")
+    .select("id, parent_id, type, title, slug, description, position, created_at")
+    .eq("slug", slug)
     .maybeSingle();
   if (error) throw error;
   return data as ContentNode | null;
@@ -70,4 +86,28 @@ export async function countDescendants(nodeId: string): Promise<number> {
     .eq("parent_id", nodeId);
   if (error) throw error;
   return count ?? 0;
+}
+
+// Siblings ordered by position — used for Previous/Next navigation
+export async function fetchSiblings(nodeId: string): Promise<ContentNode[]> {
+  const node = await fetchNode(nodeId);
+  if (!node || !node.parent_id) return [];
+  const { data, error } = await supabase
+    .from("content_nodes")
+    .select("id, parent_id, type, title, slug, description, position, created_at")
+    .eq("parent_id", node.parent_id)
+    .order("position", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as ContentNode[];
+}
+
+// All lessons within the same module root — used for "Related Lessons"
+export async function fetchModuleLessons(rootId: string): Promise<ContentNode[]> {
+  const { data, error } = await supabase
+    .from("content_nodes")
+    .select("id, parent_id, type, title, slug, description, position, created_at")
+    .or(`parent_id.eq.${rootId}`)
+    .order("position", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as ContentNode[];
 }

@@ -69,7 +69,7 @@ export async function fetchCachedLesson(
   };
 }
 
-// Notes persistence (local to user, stored in generated_content with content_type notes)
+// ---- Notes ----
 export interface LessonNote {
   id: string;
   node_slug: string;

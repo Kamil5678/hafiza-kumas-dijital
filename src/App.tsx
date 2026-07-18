@@ -3,11 +3,12 @@ import {
   fetchRoots,
   fetchChildren,
   fetchPath,
+  fetchSiblings,
   countDescendants,
   type ContentNode,
   type NodeType,
 } from "./lib/supabase";
-import { LessonView } from "./components/LessonView";
+import { LessonView, type LessonNav } from "./components/LessonView";
 
 const TYPE_LABEL: Record<NodeType, string> = {
   module: "Modül",
@@ -42,10 +43,11 @@ interface Crumb {
 }
 
 export default function App() {
-  const [, setRoots] = useState<ContentNode[]>([]);
   const [current, setCurrent] = useState<ContentNode | null>(null);
   const [children, setChildren] = useState<ContentNode[]>([]);
   const [crumbs, setCrumbs] = useState<Crumb[]>([]);
+  const [path, setPath] = useState<ContentNode[]>([]);
+  const [siblings, setSiblings] = useState<ContentNode[]>([]);
   const [allNodes, setAllNodes] = useState<ContentNode[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -56,11 +58,16 @@ export default function App() {
     setError(null);
     try {
       const data = await fetchRoots();
-      setRoots(data);
-      setAllNodes((prev) => [...prev, ...data]);
       setCurrent(null);
       setChildren(data);
       setCrumbs([]);
+      setPath([]);
+      setSiblings([]);
+      setAllNodes((prev) => {
+        const merged = [...prev];
+        for (const n of data) if (!merged.find((m) => m.id === n.id)) merged.push(n);
+        return merged;
+      });
       const c: Record<string, number> = {};
       for (const n of data) c[n.id] = await countDescendants(n.id);
       setCounts(c);
@@ -75,13 +82,19 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      const [kids, path] = await Promise.all([fetchChildren(node.id), fetchPath(node.id)]);
+      const [kids, nodePath, sibs] = await Promise.all([
+        fetchChildren(node.id),
+        fetchPath(node.id),
+        fetchSiblings(node.id),
+      ]);
       setCurrent(node);
       setChildren(kids);
-      setCrumbs(path.map((p: ContentNode) => ({ id: p.id, title: p.title, slug: p.slug })));
+      setPath(nodePath);
+      setSiblings(sibs);
+      setCrumbs(nodePath.map((p: ContentNode) => ({ id: p.id, title: p.title, slug: p.slug })));
       setAllNodes((prev) => {
         const merged = [...prev];
-        for (const k of kids) if (!merged.find((m) => m.id === k.id)) merged.push(k);
+        for (const k of [...kids, ...sibs]) if (!merged.find((m) => m.id === k.id)) merged.push(k);
         return merged;
       });
       const c: Record<string, number> = {};
@@ -101,6 +114,16 @@ export default function App() {
     else loadRoots();
   }, [allNodes, openNode, loadRoots]);
 
+  const goBackToModule = useCallback(() => {
+    // Navigate to the parent of the current lesson
+    if (path.length >= 2) {
+      const parent = path[path.length - 2];
+      openNode(parent);
+    } else {
+      loadRoots();
+    }
+  }, [path, openNode, loadRoots]);
+
   const goHome = useCallback(() => { loadRoots(); }, [loadRoots]);
 
   useEffect(() => { loadRoots(); }, [loadRoots]);
@@ -111,6 +134,18 @@ export default function App() {
 
   const showLesson = current && (current.type === "lesson" || current.type === "topic" || current.type === "subtopic");
 
+  // Compute lesson nav (prev/next/parent/root)
+  let lessonNav: LessonNav = { prev: null, next: null, parent: null, root: null };
+  if (showLesson && current) {
+    const idx = siblings.findIndex((s) => s.id === current!.id);
+    lessonNav = {
+      prev: idx > 0 ? siblings[idx - 1] : null,
+      next: idx >= 0 && idx < siblings.length - 1 ? siblings[idx + 1] : null,
+      parent: path.length >= 2 ? path[path.length - 2] : null,
+      root: path.length > 0 ? path[0] : null,
+    };
+  }
+
   return (
     <div className="layout">
       <header className="navbar">
@@ -119,9 +154,10 @@ export default function App() {
             <span className="brand-mark">T</span>
             <span className="brand-text">
               <span className="brand-name">Tekstil Hafızam</span>
-              <span className="brand-sub">bilgi motoru</span>
+              <span className="brand-sub">bilgi işletim sistemi</span>
             </span>
           </button>
+          <button className="nav-dashboard" onClick={goHome}>⊞ Panel</button>
         </div>
       </header>
 
@@ -136,35 +172,44 @@ export default function App() {
           ))}
         </nav>
 
-        <section className="header">
-          <div>
-            <div className="eyebrow">{current ? TYPE_LABEL[current.type] : "Bilgi Bankası"}</div>
-            <h1 className="title">{current ? current.title : "Üniversite Seviyesinde Bilgi Ağacı"}</h1>
-            {typeof current?.description === "string" && <p className="desc">{current.description}</p>}
-            {!current && (
-              <p className="desc">
-                Tekstil, Moda, İç Giyim, Sürdürülebilirlik, Strateji, İstatistik, Elisé Studio
-                ve Bilgi Bankası modüllerini kapsayan kapsamlı içerik hiyerarşisi.
-              </p>
-            )}
-          </div>
-          {current && <button className="btn-back" onClick={goHome}>← Tüm Modüller</button>}
-        </section>
+        {!showLesson && (
+          <section className="page-header">
+            <div>
+              <div className="eyebrow">{current ? TYPE_LABEL[current.type] : "Bilgi Bankası"}</div>
+              <h1 className="title">{current ? current.title : "Üniversite Seviyesinde Bilgi Ağacı"}</h1>
+              {typeof current?.description === "string" && <p className="desc">{current.description}</p>}
+              {!current && (
+                <p className="desc">
+                  Tekstil, Moda, İç Giyim, Sürdürülebilirlik, Strateji, İstatistik, Elisé Studio
+                  ve Bilgi Bankası modüllerini kapsayan kapsamlı içerik hiyerarşisi.
+                </p>
+              )}
+            </div>
+          </section>
+        )}
 
         {error && <div className="error">Hata: {error}</div>}
 
-        {showLesson && <LessonView node={current!} onNavigate={navigateBySlug} />}
+        {showLesson && current && (
+          <LessonView
+            node={current}
+            nav={lessonNav}
+            onNavigate={navigateBySlug}
+            onBackToModule={goBackToModule}
+            onBackToDashboard={goHome}
+          />
+        )}
 
-        {loading ? (
-          <div className="loading">Yükleniyor…</div>
-        ) : children.length === 0 ? (
-          !showLesson && (
-            <div className="empty">
-              <div className="empty-icon">○</div>
-              <p>Bu dalın altında içerik kaydı yok.</p>
-            </div>
-          )
-        ) : (
+        {loading && !showLesson && <div className="loading">Yükleniyor…</div>}
+
+        {!loading && !showLesson && children.length === 0 && (
+          <div className="empty">
+            <div className="empty-icon">○</div>
+            <p>Bu dalın altında içerik kaydı yok.</p>
+          </div>
+        )}
+
+        {!showLesson && children.length > 0 && (
           <div className="groups">
             {TYPE_ORDER.filter((t) => (grouped[t]?.length ?? 0) > 0).map((t) => (
               <section key={t} className="group">

@@ -136,10 +136,15 @@ export type Entry = {
   images: string[]; // data URLs
   status: Status;
   createdAt: number;
+  // Akıllı PDF Kütüphanesi bağlantısı
+  pdfSourceId?: string;
+  pdfSourceName?: string;
+  pdfPage?: number;
 };
 
 const KEY = "tekstil-hafizam-entries-v1";
 const TASKS_KEY = "tekstil-hafizam-tasks-v1";
+const PDFS_KEY = "tekstil-hafizam-pdfs-v1";
 
 function read(): Entry[] {
   if (typeof window === "undefined") return [];

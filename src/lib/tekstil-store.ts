@@ -1,13 +1,119 @@
 import { useEffect, useState } from "react";
 
-export type CategoryKey = "kumas" | "strateji" | "istatistik" | "elise";
+export type CategoryKey =
+  | "kumas" // "Tekstil Bilgileri" — eski adı geriye dönük uyum için korunuyor
+  | "moda"
+  | "icgiyim"
+  | "strateji"
+  | "istatistik"
+  | "elise";
 
-export const CATEGORIES: { key: CategoryKey; label: string; short: string; description: string }[] = [
-  { key: "kumas", label: "Kumaş Yapıları", short: "Kumaş", description: "Dokuma, örgü ve elyaf notları" },
-  { key: "strateji", label: "Strateji", short: "Strateji", description: "Marka, moda ve iş stratejisi" },
-  { key: "istatistik", label: "İstatistik", short: "İstatistik", description: "Veri, analiz ve trend rakamları" },
-  { key: "elise", label: "Elisé Bilgi Bankası", short: "Elisé", description: "Elisé özel arşivi" },
+export type CategoryDef = {
+  key: CategoryKey;
+  label: string;
+  short: string;
+  description: string;
+  subcategories: string[];
+};
+
+export const CATEGORIES: CategoryDef[] = [
+  {
+    key: "kumas",
+    label: "Tekstil Bilgileri",
+    short: "Tekstil",
+    description: "Dokuma, örme, elyaf, iplik, boya, baskı, terbiye ve daha fazlası.",
+    subcategories: [
+      "Genel tekstil bilgisi",
+      "Dokuma",
+      "Örme",
+      "Kumaş yapıları",
+      "Nonwoven",
+      "Elyaf bilgisi",
+      "İplik bilgisi",
+      "İplik teknolojileri — Ring",
+      "İplik teknolojileri — Open-end",
+      "İplik teknolojileri — Compact",
+      "Büküm",
+      "Kumaş analizi",
+      "Boya",
+      "Baskı",
+      "Terbiye",
+      "Tekstil testleri",
+      "Sürdürülebilir tekstil",
+      "Teknik tekstiller",
+      "Tekstil terimleri sözlüğü",
+    ],
+  },
+  {
+    key: "moda",
+    label: "Moda Bilgileri",
+    short: "Moda",
+    description: "Tarih, akımlar, tasarım ilkeleri, styling ve marka analizi.",
+    subcategories: [
+      "Moda tarihi",
+      "Moda akımları",
+      "Tasarım ilkeleri",
+      "Renk bilgisi",
+      "Siluet ve form",
+      "Koleksiyon hazırlama",
+      "Trend analizi",
+      "Defile analizi",
+      "Moda illüstrasyonu",
+      "Teknik çizim",
+      "Stil ve styling",
+      "Kumaş ve moda ilişkisi",
+      "Moda marka analizi",
+      "Hedef kitle analizi",
+      "Moda terimleri sözlüğü",
+    ],
+  },
+  {
+    key: "icgiyim",
+    label: "İç Giyim Araştırmaları",
+    short: "İç Giyim",
+    description: "Kalıp, fit, malzeme, deneyim ve marka analizi.",
+    subcategories: [
+      "Sütyen yapısı",
+      "Alt grup ürünleri",
+      "Korse",
+      "Kalıp ve fit",
+      "Beden sistemi",
+      "Konfor",
+      "Kumaş seçimi",
+      "Dantel ve aksesuarlar",
+      "Elastik malzemeler",
+      "Kadın vücudu ve ürün deneyimi",
+      "İç giyimde marka analizi",
+      "İç giyim trendleri",
+      "İç giyim terimleri",
+    ],
+  },
+  {
+    key: "strateji",
+    label: "Strateji",
+    short: "Strateji",
+    description: "Marka, moda ve iş stratejisi.",
+    subcategories: [],
+  },
+  {
+    key: "istatistik",
+    label: "İstatistik",
+    short: "İstatistik",
+    description: "Veri, analiz ve trend rakamları.",
+    subcategories: [],
+  },
+  {
+    key: "elise",
+    label: "Elisé Brand Studio",
+    short: "Elisé",
+    description: "Elisé markasının özel arşivi.",
+    subcategories: [],
+  },
 ];
+
+export function getCategory(key: CategoryKey): CategoryDef | undefined {
+  return CATEGORIES.find((c) => c.key === key);
+}
 
 export type Status = "ogrenilecek" | "tekrar" | "ogrenildi";
 

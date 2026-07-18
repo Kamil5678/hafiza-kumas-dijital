@@ -3,10 +3,10 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+  "Access-Control-Allow-Headers":
+    "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-// ─── Seeded random ──────────────────────────────────────────────
 function seededRandom(seed: number) {
   let s = seed;
   return () => {
@@ -34,7 +34,6 @@ function shuffle<T>(rng: () => number, arr: T[]): T[] {
   return r;
 }
 
-// ─── Domain profiles (module isolation) ─────────────────────────
 interface DomainProfile {
   moduleSlug: string;
   keywords: string[];
@@ -53,7 +52,7 @@ const PROFILES: Record<string, DomainProfile> = {
   "tekstil-bilgileri": {
     moduleSlug: "tekstil-bilgileri",
     keywords: ["elyaf", "iplik", "dokuma", "örme", "boyama", "terbiye", "pamuk", "polyester", "viskon", "yün", "ipek", "keten"],
-    machines: ["ring iplik makinesi", "open-end iplik makinesi", "dokuma tezgahı", " örme makinesi", "boyama cebi", "foulard", "stenter", "tarama makinesi", "pennetleme makinesi"],
+    machines: ["ring iplik makinesi", "open-end iplik makinesi", "dokuma tezgahı", "örme makinesi", "boyama cebi", "foulard", "stenter", "tarama makinesi", "pennetleme makinesi"],
     materials: ["pamuk", "polyester", "viskon", "yün", "ipek", "keten", "naylon", "akrilik", "elastan", "polipropilen"],
     standards: ["ISO 105", "ISO 139", "TS 3917", "Oeko-Tex 100", "GOTS", "ISO 5077", "ISO 6330"],
     processes: ["taraklama", "pennetleme", "ring büküm", "open-end büküm", "dokuma", "örme", "boyama", "basma", "terbiye", "mercerizasyon"],
@@ -62,14 +61,14 @@ const PROFILES: Record<string, DomainProfile> = {
     references: ["Kadolph S.J., Textiles 12th Ed.", "Saville B.P., Physical Testing of Textiles", "Eberle H., Clothing Technology"],
     distractors: ["pazarlama stratejisi", "finansal tablo", "veri madenciliği", "bulut bilişim", "mikroekonomi", "stok yönetimi", "müşteri ilişkileri", "lojistik optimizasyonu"],
     glossary: {
-      "Elyaf": "İpliği oluşturan en küçük tekstil birimi",
-      "İplik": "Elyafların bükülmesiyle oluşan tekstil malzemesi",
-      "Büküm": "İpliğe mukavemet kazandıran spiral hareket",
-      "Gramaj": "Birim alandaki kumaş ağırlığı (g/m²)",
-      "Mukavemet": "Malzemenin kopmaya karşı direnci",
-      "Neps": "İplik yüzeyindeki düğümçükler",
-      "Taraklama": "Elyafları hizalayan hazırlık işlemi",
-      "Mercerizasyon": "Pamuk ipliğine parlaklık ve mukavemet kazandırma",
+      Elyaf: "İpliği oluşturan en küçük tekstil birimi",
+      İplik: "Elyafların bükülmesiyle oluşan tekstil malzemesi",
+      Büküm: "İpliğe mukavemet kazandıran spiral hareket",
+      Gramaj: "Birim alandaki kumaş ağırlığı (g/m²)",
+      Mukavemet: "Malzemenin kopmaya karşı direnci",
+      Neps: "İplik yüzeyindeki düğümçükler",
+      Taraklama: "Elyafları hizalayan hazırlık işlemi",
+      Mercerizasyon: "Pamuk ipliğine parlaklık ve mukavemet kazandırma",
     },
   },
   "moda-bilgileri": {
@@ -84,14 +83,14 @@ const PROFILES: Record<string, DomainProfile> = {
     references: ["Sorger S., The Fundamentals of Fashion Design", "Jenkyn Jones S., Fashion Design"],
     distractors: ["iplik büküm yönü", "boyama sıcaklığı", "neps değeri", "elyaf inceliği", "mercerizasyon", "foulard", "stenter", "ring iplik"],
     glossary: {
-      "Trend": "Belirli bir dönemde popüler olan stil yönü",
-      "Koleksiyon": "Bir sezona ait tasarım serisi",
-      "Kalıp": "Kumaşın kesim şablonu",
-      "Konfeksiyon": "Hazır giyim üretimi",
-      "Defile": "Yeni koleksiyonun sunulduğu gösteri",
-      "Beden": "Giysinin ölçü standardı",
-      "Astar": "Giysinin iç yüzey dokusu",
-      "Fermuar": "Açılır kapanır bağlantı elemanı",
+      Trend: "Belirli bir dönemde popüler olan stil yönü",
+      Koleksiyon: "Bir sezona ait tasarım serisi",
+      Kalıp: "Kumaşın kesim şablonu",
+      Konfeksiyon: "Hazır giyim üretimi",
+      Defile: "Yeni koleksiyonun sunulduğu gösteri",
+      Beden: "Giysinin ölçü standardı",
+      Astar: "Giysinin iç yüzey dokusu",
+      Fermuar: "Açılır kapanır bağlantı elemanı",
     },
   },
   "ic-giyim": {
@@ -106,14 +105,14 @@ const PROFILES: Record<string, DomainProfile> = {
     references: ["Fan J., Clothing Appearance and Fit", "Labat K., Bra Sizing"],
     distractors: ["iplik büküm yönü", "boyama sıcaklığı", "neps değeri", "elyaf inceliği", "mercerizasyon", "foulard", "stenter", "ring iplik"],
     glossary: {
-      "Balen": "Sütyenin formunu koruyan çubuk",
+      Balen: "Sütyenin formunu koruyan çubuk",
       "Sütyen bedeni": "Göğüs çevresi ölçüm standardı",
-      "Korse": "Vücudu saran şekillendirici giysi",
-      "Dantel": "Dekoratif açık dokuma kumaş",
-      "Atlet": "Erkek iç üst giysisi",
-      "Pijama": "Uyku giysisi",
-      "Mikrofiber": "Çok ince elyaftan üretilmiş kumaş",
-      "Elastan": "Esneklik sağlayan sentetik elyaf",
+      Korse: "Vücudu saran şekillendirici giysi",
+      Dantel: "Dekoratif açık dokuma kumaş",
+      Atlet: "Erkek iç üst giysisi",
+      Pijama: "Uyku giysisi",
+      Mikrofiber: "Çok ince elyaftan üretilmiş kumaş",
+      Elastan: "Esneklik sağlayan sentetik elyaf",
     },
   },
   "surdurulebilirlik": {
@@ -128,17 +127,17 @@ const PROFILES: Record<string, DomainProfile> = {
     references: ["Niinimäki K., Sustainable Fashion in a Circular Economy", "GOTS Standard v7"],
     distractors: ["pazarlama stratejisi", "finansal tablo", "veri madenciliği", "bulut bilişim", "mikroekonomi", "stok yönetimi", "müşteri ilişkileri", "lojistik optimizasyonu"],
     glossary: {
-      "Sürdürülebilirlik": "Gelecek nesilleri tehlikeye atmadan üretim",
-      "GOTS": "Global Organic Textile Standard sertifikası",
+      Sürdürülebilirlik: "Gelecek nesilleri tehlikeye atmadan üretim",
+      GOTS: "Global Organic Textile Standard sertifikası",
       "Döngüsel ekonomi": "Atığı en aza indiren ekonomik model",
-      "LCA": "Yaşam döngüsü değerlendirmesi",
+      LCA: "Yaşam döngüsü değerlendirmesi",
       "Karbon ayak izi": "Üretimde salınan sera gazı miktarı",
       "Geri dönüşüm": "Atık malzemenin tekrar hammaddeye çevrilmesi",
       "Organik pamuk": "Sentetik kimyasal kullanılmadan üretilen pamuk",
       "Higg Index": "Sürdürülebilirlik ölçüm çerçevesi",
     },
   },
-  "strateji": {
+  strateji: {
     moduleSlug: "strateji",
     keywords: ["strateji", "vizyon", "misyon", "SWOT", "rekabet avantajı", "pazarlama", "müşteri", "konumlandırma", "büyüme"],
     machines: ["CRM sistemi", "ERP sistemi", "veri ambarı", "BI aracı"],
@@ -150,17 +149,17 @@ const PROFILES: Record<string, DomainProfile> = {
     references: ["Porter M.E., Competitive Strategy", "Kotler P., Marketing Management", "Kaplan R., Balanced Scorecard"],
     distractors: ["iplik büküm yönü", "boyama sıcaklığı", "neps değeri", "elyaf inceliği", "mercerizasyon", "foulard", "stenter", "ring iplik", "pamuk elyafı", "dokuma tezgahı"],
     glossary: {
-      "Strateji": "Uzun vadeli hedeflere ulaşma planı",
-      "Vizyon": "Şirketin gelecekte ulaşmak istediği durum",
-      "Misyon": "Şirketin bugünkü amacı ve varlık nedeni",
-      "SWOT": "Güçlü-zayıf yönler, fırsat-tehdit analizi",
+      Strateji: "Uzun vadeli hedeflere ulaşma planı",
+      Vizyon: "Şirketin gelecekte ulaşmak istediği durum",
+      Misyon: "Şirketin bugünkü amacı ve varlık nedeni",
+      SWOT: "Güçlü-zayıf yönler, fırsat-tehdit analizi",
       "Rekabet avantajı": "Rakiplere göre üstünlük sağlayan özellik",
-      "Konumlandırma": "Tüketicinin zihninde marka yerleşimi",
-      "ROI": "Yatırım getiri oranı",
+      Konumlandırma: "Tüketicinin zihninde marka yerleşimi",
+      ROI: "Yatırım getiri oranı",
       "Marka değeri": "Markanın yarattığı algısal ve finansal değer",
     },
   },
-  "istatistik": {
+  istatistik: {
     moduleSlug: "istatistik",
     keywords: ["ortalama", "medyan", "standart sapma", "varyans", "korelasyon", "regresyon", "hipotez testi", "olasılık", "dağılım"],
     machines: ["R", "Python", "SPSS", "Excel", "SAS"],
@@ -172,14 +171,14 @@ const PROFILES: Record<string, DomainProfile> = {
     references: ["Montgomery D.C., Applied Statistics and Probability", "Field A., Discovering Statistics Using R"],
     distractors: ["pazarlama stratejisi", "finansal tablo", "veri madenciliği", "bulut bilişim", "mikroekonomi", "stok yönetimi", "müşteri ilişkileri", "lojistik optimizasyonu", "iplik büküm yönü", "boyama sıcaklığı"],
     glossary: {
-      "Ortalama": "Verilerin toplamının sayısına bölümü",
-      "Medyan": "Sıralı verinin ortanca değeri",
+      Ortalama: "Verilerin toplamının sayısına bölümü",
+      Medyan: "Sıralı verinin ortanca değeri",
       "Standart sapma": "Verilerin ortalamadan yayılımı",
-      "Varyans": "Standart sapmanın karesi",
-      "Korelasyon": "İki değişken arasındaki ilişki",
+      Varyans: "Standart sapmanın karesi",
+      Korelasyon: "İki değişken arasındaki ilişki",
       "p-değeri": "Hipotez testinde anlamlılık ölçütü",
-      "Regresyon": "Değişkenler arası bağımlılık modeli",
-      "Olasılık": "Bir olayın gerçekleşme şansı",
+      Regresyon: "Değişkenler arası bağımlılık modeli",
+      Olasılık: "Bir olayın gerçekleşme şansı",
     },
   },
   "elise-studio": {
@@ -194,14 +193,14 @@ const PROFILES: Record<string, DomainProfile> = {
     references: ["Lupton E., Graphic Design Thinking", "Heller S., The Graphic Design Reader"],
     distractors: ["iplik büküm yönü", "boyama sıcaklığı", "neps değeri", "elyaf inceliği", "mercerizasyon", "foulard", "stenter", "ring iplik", "pamuk elyafı", "dokuma tezgahı"],
     glossary: {
-      "Logo": "Markanın grafik simgesi",
-      "Tipografi": "Metin düzenleme sanatı",
+      Logo: "Markanın grafik simgesi",
+      Tipografi: "Metin düzenleme sanatı",
       "Renk paleti": "Tasarımda kullanılan renk seti",
-      "Vektör": "Çözünürlükten bağımsız grafik formatı",
+      Vektör: "Çözünürlükten bağımsız grafik formatı",
       "Marka kimliği": "Markanın görsel ve davranışsal bütünü",
       "Görsel hiyerarşi": "Öğelerin önem sırasına göre düzenlenmesi",
-      "Kontrast": "Açık-koyu veya tamamlayıcı renk farkı",
-      "Hizalama": "Öğelerin düzenli yerleşimi",
+      Kontrast: "Açık-koyu veya tamamlayıcı renk farkı",
+      Hizalama: "Öğelerin düzenli yerleşimi",
     },
   },
   "bilgi-bankasi": {
@@ -216,14 +215,14 @@ const PROFILES: Record<string, DomainProfile> = {
     references: ["ISO 690:2021", "APA Publication Manual 7th Ed.", "University of Chicago Press, CMoS 17"],
     distractors: ["pazarlama stratejisi", "finansal tablo", "veri madenciliği", "bulut bilişim", "mikroekonomi", "stok yönetimi", "müşteri ilişkileri", "lojistik optimizasyonu", "iplik büküm yönü", "boyama sıcaklığı"],
     glossary: {
-      "Bibliyografya": "Kaynakların listesi",
-      "Atıf": "Bir kaynağa referans verme",
-      "DOI": "Dijital nesne tanımlayıcısı",
+      Bibliyografya: "Kaynakların listesi",
+      Atıf: "Bir kaynağa referans verme",
+      DOI: "Dijital nesne tanımlayıcısı",
       "Meta veri": "Veri hakkında veri",
-      "Dizin": "Kaynakların konuya göre sıralandığı liste",
-      "Veritabanı": "Yapılı bilgi deposu",
+      Dizin: "Kaynakların konuya göre sıralandığı liste",
+      Veritabanı: "Yapılı bilgi deposu",
       "Arama motoru": "Bilgi bulma aracı",
-      "Arşivleme": "Kaynakların kalıcı saklanması",
+      Arşivleme: "Kaynakların kalıcı saklanması",
     },
   },
 };
@@ -254,15 +253,19 @@ function findModuleSlug(node: any, allNodes: any[]): string {
   return current?.slug || "genel";
 }
 
-// ─── Section builders ───────────────────────────────────────────
-function buildSections(node: any, profile: DomainProfile, children: any[], siblings: any[], rng: () => number): any {
+function buildSections(
+  node: any,
+  profile: DomainProfile,
+  children: any[],
+  siblings: any[],
+  rng: () => number
+): any {
   const title = node.title;
   const desc = node.description || `${title} konusunun detaylı incelenmesi.`;
   const moduleTitle = profile.moduleSlug.replace(/-/g, " ");
 
   const sections: Record<string, any> = {};
 
-  // 1. Öğrenme Hedefleri
   sections["ogrenme_hedefleri"] = {
     title: "Öğrenme Hedefleri",
     type: "list",
@@ -275,28 +278,24 @@ function buildSections(node: any, profile: DomainProfile, children: any[], sibli
     ],
   };
 
-  // 2. Giriş
   sections["giris"] = {
     title: "Giriş",
     type: "text",
     content: `${title}, ${moduleTitle} alanının temel konularından biridir. ${desc} Bu bölümde ${title.toLowerCase()} kavramı, temel ilkeleri, endüstriyel uygulamaları ve kalite parametreleri açısından kapsamlı biçimde ele alınacaktır. Konu, teorik temellerden pratik uygulamalara doğru bir sırayla yapılandırılmıştır.`,
   };
 
-  // 3. Tanım ve Kavramlar
   sections["tanim_ve_kavramlar"] = {
     title: "Tanım ve Kavramlar",
     type: "text",
     content: `${title}, ${profile.keywords.slice(0, 3).join(", ")} bağlamında tanımlandığında, ${desc.toLowerCase()} Bu kavramın doğru anlaşılması için ${profile.keywords[0]} ve ${profile.keywords[1] || profile.keywords[0]} arasındaki ilişkinin kavranması gerekir.`,
   };
 
-  // 4. Tarihsel Gelişim
   sections["tarihsel_gelisim"] = {
     title: "Tarihsel Gelişim",
     type: "text",
     content: `${title} kavramı, endüstriyel gelişim sürecinde önemli dönüşümler geçirmiştir. İlk uygulamalar ${profile.keywords[0]} üzerine kuruludur. Modern dönemde ${profile.machines[0]} ve ${profile.machines[1] || profile.machines[0]} kullanımı ile süreçler standartlaştırılmıştır.`,
   };
 
-  // 5. Temel İlkeler
   sections["temel_ilkeler"] = {
     title: "Temel İlkeler",
     type: "list",
@@ -308,7 +307,6 @@ function buildSections(node: any, profile: DomainProfile, children: any[], sibli
     ],
   };
 
-  // 6. Sınıflandırma
   sections["siniflandirma"] = {
     title: "Sınıflandırma",
     type: "table",
@@ -320,7 +318,6 @@ function buildSections(node: any, profile: DomainProfile, children: any[], sibli
     ]),
   };
 
-  // 7. Teknik Parametreler
   sections["teknik_parametreler"] = {
     title: "Teknik Parametreler",
     type: "table",
@@ -332,42 +329,36 @@ function buildSections(node: any, profile: DomainProfile, children: any[], sibli
     ]),
   };
 
-  // 8. Malzemeler
   sections["malzemeler"] = {
     title: "Malzemeler",
     type: "list",
     items: profile.materials.slice(0, 5).map((m) => `${m}: ${title} sürecinde kullanılan temel malzeme`),
   };
 
-  // 9. Makine ve Ekipmanlar
   sections["makine_ve_ekipmanlar"] = {
     title: "Makine ve Ekipmanlar",
     type: "list",
     items: profile.machines.slice(0, 5).map((m) => `${m}: ${title} üretiminde kullanılan ekipman`),
   };
 
-  // 10. Üretim Süreci
   sections["uretim_sureci"] = {
     title: "Üretim Süreci",
     type: "text",
     content: `${title} üretim süreci şu adımları içerir: ${profile.processes.slice(0, 5).join(" → ")}. Sürecin her adımında ${profile.standards[0]} standardına uyum sağlanır ve ${profile.properties[0]} kontrol edilir.`,
   };
 
-  // 11. Kalite Kontrol
   sections["kalite_kontrol"] = {
     title: "Kalite Kontrol",
     type: "text",
     content: `Kalite kontrol aşamasında ${profile.properties.slice(0, 3).join(", ")} parametreleri ölçülür. ${profile.standards[0]} ve ${profile.standards[1] || profile.standards[0]} standartlarına göre değerlendirme yapılır. Uygun olmayan ürünler tespit edilip ${profile.processes[0]} adımına geri gönderilir.`,
   };
 
-  // 12. Uygulama Alanları
   sections["uygulama_alanlari"] = {
     title: "Uygulama Alanları",
     type: "list",
     items: profile.applications.map((a) => `${a}: ${title} uygulamasının kullanıldığı sektör`),
   };
 
-  // 13. Avantajlar
   sections["avantajlar"] = {
     title: "Avantajlar",
     type: "list",
@@ -379,7 +370,6 @@ function buildSections(node: any, profile: DomainProfile, children: any[], sibli
     ],
   };
 
-  // 14. Dezavantajlar
   sections["dezavantajlar"] = {
     title: "Dezavantajlar",
     type: "list",
@@ -391,7 +381,6 @@ function buildSections(node: any, profile: DomainProfile, children: any[], sibli
     ],
   };
 
-  // 15. Standartlar ve Normlar
   sections["standartlar_ve_normlar"] = {
     title: "Standartlar ve Normlar",
     type: "table",
@@ -399,7 +388,6 @@ function buildSections(node: any, profile: DomainProfile, children: any[], sibli
     rows: profile.standards.slice(0, 5).map((s) => [s, `${title} kalite kriterleri`]),
   };
 
-  // 16. Sık Yapılan Hatalar
   sections["sik_yapilan_hatalar"] = {
     title: "Sık Yapılan Hatalar",
     type: "list",
@@ -411,42 +399,36 @@ function buildSections(node: any, profile: DomainProfile, children: any[], sibli
     ],
   };
 
-  // 17. Vaka Çalışması
   sections["vaka_calismasi"] = {
     title: "Vaka Çalışması",
     type: "text",
     content: `Bir ${profile.applications[0]} firmasında ${title} uygulaması: Üretim hattında ${profile.machines[0]} kullanılarak ${profile.properties[0]} %${15 + Math.floor(rng() * 20)} artırılmıştır. Kalite kontrol sonucunda ${profile.standards[0]} uyumu sağlanmış ve müşteri reddi oranı %${Math.floor(rng() * 5)}'e düşmüştür.`,
   };
 
-  // 18. Özet
   sections["ozet"] = {
     title: "Özet",
     type: "text",
     content: `${title}, ${moduleTitle} alanında ${profile.properties[0]} ve ${profile.standards[0]} çerçevesinde yürütülen kritik bir süreçtir. Bu bölümde ${title.toLowerCase()} kavramı, temel ilkeleri, teknik parametreleri ve endüstriyel uygulamaları ile birlikte ele alınmıştır.`,
   };
 
-  // 19. Terimler Sözlüğü
   sections["terimler_sozlugu"] = {
     title: "Terimler Sözlüğü",
     type: "glossary",
     items: Object.entries(profile.glossary).slice(0, 8).map(([term, def]) => ({ term, definition: def })),
   };
 
-  // 20. İlgili Konular
   sections["ilgili_konular"] = {
     title: "İlgili Konular",
     type: "list",
     items: siblings.filter((s) => s.id !== node.id).slice(0, 5).map((s) => s.title),
   };
 
-  // 21. Referanslar
   sections["referanslar"] = {
     title: "Referanslar",
     type: "list",
     items: profile.references,
   };
 
-  // 22. Görsel Şema
   sections["gorsel_sema"] = {
     title: "Görsel Şema",
     type: "diagram",
@@ -457,7 +439,6 @@ function buildSections(node: any, profile: DomainProfile, children: any[], sibli
   return sections;
 }
 
-// ─── Quiz engine ────────────────────────────────────────────────
 interface QuizQuestion {
   type: string;
   type_label: string;
@@ -468,20 +449,13 @@ interface QuizQuestion {
   explanations: string[];
 }
 
-const QUIZ_TYPES = [
-  { type: "definition", label: "Tanım" },
-  { type: "classification", label: "Sınıflandırma" },
-  { type: "true_false", label: "Doğru-Yanlış" },
-  { type: "comparison", label: "Karşılaştırma" },
-  { type: "application", label: "Uygulama" },
-  { type: "technical_properties", label: "Teknik Özellik" },
-  { type: "manufacturing_process", label: "Üretim Süreci" },
-  { type: "advantages", label: "Avantajlar" },
-  { type: "disadvantages", label: "Dezavantajlar" },
-  { type: "case_study", label: "Vaka Çalışması" },
-];
-
-function buildQuiz(node: any, profile: DomainProfile, children: any[], siblings: any[], rng: () => number): QuizQuestion[] {
+function buildQuiz(
+  node: any,
+  profile: DomainProfile,
+  children: any[],
+  siblings: any[],
+  rng: () => number
+): QuizQuestion[] {
   const questions: QuizQuestion[] = [];
   const title = node.title;
   const desc = node.description || `${title} konusunun detaylı incelenmesi.`;
@@ -504,28 +478,21 @@ function buildQuiz(node: any, profile: DomainProfile, children: any[], siblings:
   }
 
   // 1. Definition
+  const defOpts = shuffle(rng, [
+    desc,
+    `${distractors[0]}, bir üretim yöntemidir`,
+    `${distractors[1]}, bir analiz tekniğidir`,
+    `${distractors[2] || distractors[0]}, bir yönetim aracıdır`,
+  ]);
+  const defCorrectIdx = defOpts.findIndex((o) => o === desc);
   addQuestion({
     type: "definition",
     type_label: "Tanım",
     question: `"${title}" aşağıdakilerden hangisi ile en doğru şekilde tanımlanır?`,
-    options: shuffle(rng, [
-      desc,
-      `${distractors[0]}, bir üretim yöntemidir`,
-      `${distractors[1]}, bir analiz tekniğidir`,
-      `${distractors[2] || distractors[0]}, bir yönetim aracıdır`,
-    ]),
-    correct_index: 0,
-    explanations: [
-      `"${title}" tanımı: ${desc}`,
-      `${distractors[0]} ${title} ile ilgili bir tanım değildir; farklı bir alana aittir.`,
-      `${distractors[1]} ${title} kapsamında yer almaz.`,
-      `${distractors[2] || distractors[0]} bu konuyla ilgili değildir.`,
-    ],
+    options: defOpts,
+    correct_index: defCorrectIdx,
+    explanations: defOpts.map((o) => (o === desc ? `"${title}" tanımı: ${desc}` : `Bu tanım "${title}" için geçerli değildir; farklı bir kavrama aittir.`)),
   });
-  // fix correct_index after shuffle
-  const q1Correct = questions[questions.length - 1];
-  q1Correct.correct_index = q1Correct.options.findIndex((o) => o === desc);
-  q1Correct.explanations = q1Correct.options.map((o) => (o === desc ? `"${title}" tanımı: ${desc}` : `Bu tanım "${title}" için geçerli değildir; farklı bir kavrama aittir.`));
 
   // 2. Classification
   if (children.length >= 2) {
@@ -544,7 +511,7 @@ function buildQuiz(node: any, profile: DomainProfile, children: any[], siblings:
     });
   }
 
-  // 3. True/False (4 statements: 2 true, 2 false)
+  // 3. True/False (4 statements)
   const true1 = `${title} sürecinde ${profile.properties[0]} parametresi kritik öneme sahiptir.`;
   const true2 = `${title}, ${profile.standards[0]} standardı çerçevesinde değerlendirilir.`;
   const false1 = `${title} sürecinde ${distractors[0]} kullanılır.`;
@@ -670,7 +637,7 @@ function buildQuiz(node: any, profile: DomainProfile, children: any[], siblings:
     explanations: caseOpts.map((o) => (o === correctCase ? `${profile.applications[0]} alanında ${title} uygulaması ${profile.properties[0]} iyileştirmesi sağlar.` : `${o}, ${title} vaka sonuçlarından biri değildir.`)),
   });
 
-  // Additional questions from children definitions
+  // Additional from children
   children.slice(0, 5).forEach((child) => {
     if (questions.length >= 15) return;
     const correct = child.title;
@@ -688,7 +655,7 @@ function buildQuiz(node: any, profile: DomainProfile, children: any[], siblings:
     });
   });
 
-  // Extra: materials question
+  // Extra: materials
   if (questions.length < 12 && profile.materials.length >= 4) {
     const correctMat = profile.materials[0];
     const wrongMats = profile.distractors.slice(0, 3);
@@ -704,7 +671,7 @@ function buildQuiz(node: any, profile: DomainProfile, children: any[], siblings:
     });
   }
 
-  // Extra: standards question
+  // Extra: standards
   if (questions.length < 13 && profile.standards.length >= 2) {
     const correctStd = profile.standards[0];
     const wrongStds = [...profile.distractors.slice(0, 3)];
@@ -721,7 +688,7 @@ function buildQuiz(node: any, profile: DomainProfile, children: any[], siblings:
     });
   }
 
-  // Extra: glossary question
+  // Extra: glossary
   if (questions.length < 14 && Object.keys(profile.glossary).length >= 2) {
     const glossaryEntries = Object.entries(profile.glossary);
     const [term, def] = glossaryEntries[0];
@@ -742,8 +709,12 @@ function buildQuiz(node: any, profile: DomainProfile, children: any[], siblings:
   return questions.slice(0, 15);
 }
 
-// ─── Flashcards ─────────────────────────────────────────────────
-function buildFlashcards(node: any, profile: DomainProfile, children: any[], rng: () => number): any[] {
+function buildFlashcards(
+  node: any,
+  profile: DomainProfile,
+  children: any[],
+  rng: () => number
+): any[] {
   const cards: any[] = [];
   const title = node.title;
 
@@ -772,7 +743,6 @@ function buildFlashcards(node: any, profile: DomainProfile, children: any[], rng
   return shuffle(rng, cards).slice(0, 24);
 }
 
-// ─── Main handler ───────────────────────────────────────────────
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -790,9 +760,7 @@ Deno.serve(async (req: Request) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Fetch node
     const nodeRes = await fetch(`${supabaseUrl}/rest/v1/content_nodes?slug=eq.${slug}&select=*`, {
       headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
     });
@@ -805,7 +773,6 @@ Deno.serve(async (req: Request) => {
     }
     const node = nodeData[0];
 
-    // Check cache unless force
     if (!force) {
       const cacheRes = await fetch(
         `${supabaseUrl}/rest/v1/generated_content?node_slug=eq.${slug}&content_type=eq.full_lesson&difficulty=eq.${difficulty}&select=payload&order=created_at.desc&limit=1`,
@@ -820,7 +787,6 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Fetch all nodes for hierarchy
     const allRes = await fetch(`${supabaseUrl}/rest/v1/content_nodes?select=*&order=position.asc`, {
       headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
     });
@@ -849,7 +815,6 @@ Deno.serve(async (req: Request) => {
       generated_at: new Date().toISOString(),
     };
 
-    // Save to cache
     await fetch(`${supabaseUrl}/rest/v1/generated_content`, {
       method: "POST",
       headers: {

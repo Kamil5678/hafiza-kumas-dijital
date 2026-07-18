@@ -2,7 +2,11 @@ import { supabase } from "./supabase";
 
 const EDGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/full-lesson`;
 
-export async function generateLesson(slug: string, difficulty = "intermediate", force = false): Promise<any> {
+export async function generateLesson(
+  slug: string,
+  difficulty = "intermediate",
+  force = false
+): Promise<any> {
   const res = await fetch(EDGE_URL, {
     method: "POST",
     headers: {

@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { fetchCachedLesson, type ContentNode, fetchSiblings } from "../lib/supabase";
+import {
+  fetchCachedLesson,
+  fetchSiblings,
+  type ContentNode,
+} from "../lib/supabase";
 import { fetchNotes, saveNote } from "../lib/lesson";
 
 interface LessonContent {
@@ -21,7 +25,13 @@ interface Props {
   onRegenerate: (slug: string) => Promise<void>;
 }
 
-type Tab = "content" | "visuals" | "quiz" | "flashcards" | "notes" | "related";
+type Tab =
+  | "content"
+  | "visuals"
+  | "quiz"
+  | "flashcards"
+  | "notes"
+  | "related";
 
 const TAB_LABELS: Record<Tab, string> = {
   content: "Konu Anlatımı",
@@ -33,15 +43,37 @@ const TAB_LABELS: Record<Tab, string> = {
 };
 
 const SECTION_ORDER = [
-  "ogrenme_hedefleri", "giris", "tanim_ve_kavramlar", "tarihsel_gelisim",
-  "temel_ilkeler", "siniflandirma", "teknik_parametreler", "malzemeler",
-  "makine_ve_ekipmanlar", "uretim_sureci", "kalite_kontrol", "uygulama_alanlari",
-  "avantajlar", "dezavantajlar", "standartlar_ve_normlar", "sik_yapilan_hatalar",
-  "vaka_calismasi", "ozet", "terimler_sozlugu", "ilgili_konular",
-  "referanslar", "gorsel_sema",
+  "ogrenme_hedefleri",
+  "giris",
+  "tanim_ve_kavramlar",
+  "tarihsel_gelisim",
+  "temel_ilkeler",
+  "siniflandirma",
+  "teknik_parametreler",
+  "malzemeler",
+  "makine_ve_ekipmanlar",
+  "uretim_sureci",
+  "kalite_kontrol",
+  "uygulama_alanlari",
+  "avantajlar",
+  "dezavantajlar",
+  "standartlar_ve_normlar",
+  "sik_yapilan_hatalar",
+  "vaka_calismasi",
+  "ozet",
+  "terimler_sozlugu",
+  "ilgili_konular",
+  "referanslar",
+  "gorsel_sema",
 ];
 
-export default function LessonView({ node, onNavigate, onBackToModule, onBackToDashboard, onRegenerate }: Props) {
+export default function LessonView({
+  node,
+  onNavigate,
+  onBackToModule,
+  onBackToDashboard,
+  onRegenerate,
+}: Props) {
   const [content, setContent] = useState<LessonContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +89,9 @@ export default function LessonView({ node, onNavigate, onBackToModule, onBackToD
     try {
       const cached = await fetchCachedLesson(node.slug);
       if (!cached) {
-        setError("Bu ders için içerik henüz üretilmemiş. Lütfen yönetici panelinden içerik üretimini başlatın.");
+        setError(
+          "Bu ders için içerik henüz üretilmemiş. Lütfen panele dönüp içerik üretimini başlatın."
+        );
         setLoading(false);
         return;
       }
@@ -111,7 +145,11 @@ export default function LessonView({ node, onNavigate, onBackToModule, onBackToD
         <h3>İçerik Bulunamadı</h3>
         <p>{error}</p>
         <div className="error-actions">
-          <button className="btn btn-primary" onClick={handleRegenerate} disabled={regenerating}>
+          <button
+            className="btn btn-primary"
+            onClick={handleRegenerate}
+            disabled={regenerating}
+          >
             {regenerating ? "Üretiliyor..." : "İçeriği Üret"}
           </button>
           <button className="btn btn-secondary" onClick={onBackToDashboard}>
@@ -125,18 +163,29 @@ export default function LessonView({ node, onNavigate, onBackToModule, onBackToD
   if (!content) return null;
 
   const currentIndex = siblings.findIndex((s) => s.id === node.id);
-  const prevLesson = currentIndex > 0 ? siblings[currentIndex - 1] : null;
-  const nextLesson = currentIndex >= 0 && currentIndex < siblings.length - 1 ? siblings[currentIndex + 1] : null;
+  const prevLesson =
+    currentIndex > 0 ? siblings[currentIndex - 1] : null;
+  const nextLesson =
+    currentIndex >= 0 && currentIndex < siblings.length - 1
+      ? siblings[currentIndex + 1]
+      : null;
 
   return (
     <div className="lesson-view">
       <div className="lesson-header">
         <div className="lesson-header-info">
-          <span className="lesson-module-badge">{content.module.replace(/-/g, " ")}</span>
+          <span className="lesson-module-badge">
+            {content.module.replace(/-/g, " ")}
+          </span>
           <h1 className="lesson-title">{content.node_title}</h1>
           <span className="lesson-difficulty">{content.difficulty}</span>
         </div>
-        <button className="btn btn-ghost btn-sm" onClick={handleRegenerate} disabled={regenerating} title="Yönetici: İçeriği yeniden üret">
+        <button
+          className="btn btn-ghost btn-sm"
+          onClick={handleRegenerate}
+          disabled={regenerating}
+          title="Yönetici: İçeriği yeniden üret"
+        >
           {regenerating ? "Üretiliyor..." : "↻ Yeniden Üret"}
         </button>
       </div>
@@ -149,8 +198,12 @@ export default function LessonView({ node, onNavigate, onBackToModule, onBackToD
             onClick={() => setTab(t)}
           >
             {TAB_LABELS[t]}
-            {t === "quiz" && content.quiz.length > 0 && <span className="tab-badge">{content.quiz.length}</span>}
-            {t === "flashcards" && content.flashcards.length > 0 && <span className="tab-badge">{content.flashcards.length}</span>}
+            {t === "quiz" && content.quiz.length > 0 && (
+              <span className="tab-badge">{content.quiz.length}</span>
+            )}
+            {t === "flashcards" && content.flashcards.length > 0 && (
+              <span className="tab-badge">{content.flashcards.length}</span>
+            )}
           </button>
         ))}
       </div>
@@ -159,36 +212,48 @@ export default function LessonView({ node, onNavigate, onBackToModule, onBackToD
         {tab === "content" && <ContentTab sections={content.sections} />}
         {tab === "visuals" && <VisualsTab sections={content.sections} />}
         {tab === "quiz" && <QuizTab quiz={content.quiz} />}
-        {tab === "flashcards" && <FlashcardsTab cards={content.flashcards} />}
+        {tab === "flashcards" && (
+          <FlashcardsTab cards={content.flashcards} />
+        )}
         {tab === "notes" && (
-          <NotesTab note={note} setNote={setNote} onSave={handleSaveNote} saved={noteSaved} />
+          <NotesTab
+            note={note}
+            setNote={setNote}
+            onSave={handleSaveNote}
+            saved={noteSaved}
+          />
         )}
         {tab === "related" && (
-          <RelatedTab sections={content.sections} siblings={siblings} currentSlug={node.slug} onNavigate={onNavigate} />
+          <RelatedTab
+            sections={content.sections}
+            siblings={siblings}
+            currentSlug={node.slug}
+            onNavigate={onNavigate}
+          />
         )}
       </div>
 
       <div className="lesson-nav-footer">
-        <button
-          className="btn btn-ghost"
-          onClick={onBackToDashboard}
-        >
+        <button className="btn btn-ghost" onClick={onBackToDashboard}>
           ← Panele Dön
         </button>
-        <button
-          className="btn btn-ghost"
-          onClick={onBackToModule}
-        >
+        <button className="btn btn-ghost" onClick={onBackToModule}>
           ↑ Modüle Dön
         </button>
         <div className="nav-spacer" />
         {prevLesson && (
-          <button className="btn btn-ghost" onClick={() => onNavigate(prevLesson.slug)}>
+          <button
+            className="btn btn-ghost"
+            onClick={() => onNavigate(prevLesson.slug)}
+          >
             ← {prevLesson.title}
           </button>
         )}
         {nextLesson && (
-          <button className="btn btn-ghost" onClick={() => onNavigate(nextLesson.slug)}>
+          <button
+            className="btn btn-ghost"
+            onClick={() => onNavigate(nextLesson.slug)}
+          >
             {nextLesson.title} →
           </button>
         )}
@@ -197,7 +262,6 @@ export default function LessonView({ node, onNavigate, onBackToModule, onBackToD
   );
 }
 
-// ─── Content Tab ─────────────────────────────────────────────────
 function ContentTab({ sections }: { sections: Record<string, any> }) {
   return (
     <div className="content-tab">
@@ -237,11 +301,19 @@ function SectionBody({ section }: { section: any }) {
       <div className="table-wrap">
         <table className="section-table">
           <thead>
-            <tr>{section.headers.map((h: string, i: number) => <th key={i}>{h}</th>)}</tr>
+            <tr>
+              {section.headers.map((h: string, i: number) => (
+                <th key={i}>{h}</th>
+              ))}
+            </tr>
           </thead>
           <tbody>
             {section.rows.map((row: string[], i: number) => (
-              <tr key={i}>{row.map((cell, j) => <td key={j}>{cell}</td>)}</tr>
+              <tr key={i}>
+                {row.map((cell, j) => (
+                  <td key={j}>{cell}</td>
+                ))}
+              </tr>
             ))}
           </tbody>
         </table>
@@ -274,7 +346,6 @@ function SectionBody({ section }: { section: any }) {
   return null;
 }
 
-// ─── Visuals Tab ─────────────────────────────────────────────────
 function VisualsTab({ sections }: { sections: Record<string, any> }) {
   const diagram = sections["gorsel_sema"];
   return (
@@ -291,24 +362,24 @@ function VisualsTab({ sections }: { sections: Record<string, any> }) {
       )}
       <div className="visual-info">
         <h3>Görsel İçerik Notu</h3>
-        <p>Bu dersin görsel şeması yukarıda gösterilmiştir. Üretim akış diyagramı, teknik parametre tabloları ve süreç şemaları Konu Anlatımı sekmesinde de bulunabilir.</p>
+        <p>
+          Bu dersin görsel şeması yukarıda gösterilmiştir. Üretim akış diyagramı,
+          teknik parametre tabloları ve süreç şemaları Konu Anlatımı sekmesinde
+          de bulunabilir.
+        </p>
       </div>
     </div>
   );
 }
 
-// ─── Quiz Tab ────────────────────────────────────────────────────
 function QuizTab({ quiz }: { quiz: any[] }) {
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [submitted, setSubmitted] = useState(false);
 
-  const score = quiz.reduce((acc, q, i) => acc + (answers[i] === q.correct_index ? 1 : 0), 0);
-
-  const handleSubmit = () => setSubmitted(true);
-  const handleRetry = () => {
-    setAnswers({});
-    setSubmitted(false);
-  };
+  const score = quiz.reduce(
+    (acc, q, i) => acc + (answers[i] === q.correct_index ? 1 : 0),
+    0
+  );
 
   if (quiz.length === 0) {
     return <div className="quiz-empty">Bu ders için quiz bulunmamaktadır.</div>;
@@ -318,9 +389,25 @@ function QuizTab({ quiz }: { quiz: any[] }) {
     <div className="quiz-tab">
       {submitted && (
         <div className="quiz-score-banner">
-          <h3>Sonuç: {score} / {quiz.length}</h3>
-          <p>{score >= quiz.length * 0.7 ? "Tebrikler! Bu konuya hakimsiniz." : score >= quiz.length * 0.5 ? "İyi, ancak tekrar etmek faydalı olur." : "Bu konuyu tekrar gözden geçirmeniz önerilir."}</p>
-          <button className="btn btn-primary" onClick={handleRetry}>Tekrar Dene</button>
+          <h3>
+            Sonuç: {score} / {quiz.length}
+          </h3>
+          <p>
+            {score >= quiz.length * 0.7
+              ? "Tebrikler! Bu konuya hakimsiniz."
+              : score >= quiz.length * 0.5
+              ? "İyi, ancak tekrar etmek faydalı olur."
+              : "Bu konuyu tekrar gözden geçirmeniz önerilir."}
+          </p>
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              setAnswers({});
+              setSubmitted(false);
+            }}
+          >
+            Tekrar Dene
+          </button>
         </div>
       )}
       {quiz.map((q, qi) => (
@@ -339,13 +426,20 @@ function QuizTab({ quiz }: { quiz: any[] }) {
               return (
                 <button
                   key={oi}
-                  className={`quiz-option ${isSelected ? "selected" : ""} ${showResult ? (isCorrect ? "correct" : "incorrect") : ""} ${showCorrect ? "correct" : ""}`}
-                  onClick={() => !submitted && setAnswers({ ...answers, [qi]: oi })}
+                  className={`quiz-option ${isSelected ? "selected" : ""} ${
+                    showResult ? (isCorrect ? "correct" : "incorrect") : ""
+                  } ${showCorrect ? "correct" : ""}`}
+                  onClick={() =>
+                    !submitted &&
+                    setAnswers({ ...answers, [qi]: oi })
+                  }
                   disabled={submitted}
                 >
                   <span className="quiz-option-text">{opt}</span>
                   {showCorrect && <span className="quiz-mark">✓</span>}
-                  {showResult && !isCorrect && <span className="quiz-mark">✗</span>}
+                  {showResult && !isCorrect && (
+                    <span className="quiz-mark">✗</span>
+                  )}
                 </button>
               );
             })}
@@ -353,14 +447,23 @@ function QuizTab({ quiz }: { quiz: any[] }) {
           {submitted && (
             <div className="quiz-explanations">
               <div className="quiz-main-explanation">
-                <strong>Açıklama: </strong>{q.explanation}
+                <strong>Açıklama: </strong>
+                {q.explanation}
               </div>
               <details className="quiz-detail-panel">
                 <summary>Seçenek açıklamalarını göster</summary>
                 <ul>
                   {q.options.map((opt: string, oi: number) => (
-                    <li key={oi} className={oi === q.correct_index ? "exp-correct" : "exp-incorrect"}>
-                      <strong>{opt}: </strong>{q.explanations[oi]}
+                    <li
+                      key={oi}
+                      className={
+                        oi === q.correct_index
+                          ? "exp-correct"
+                          : "exp-incorrect"
+                      }
+                    >
+                      <strong>{opt}: </strong>
+                      {q.explanations[oi]}
                     </li>
                   ))}
                 </ul>
@@ -370,7 +473,10 @@ function QuizTab({ quiz }: { quiz: any[] }) {
         </div>
       ))}
       {!submitted && (
-        <button className="btn btn-primary btn-block" onClick={handleSubmit}>
+        <button
+          className="btn btn-primary btn-block"
+          onClick={() => setSubmitted(true)}
+        >
           Cevapları Gönder
         </button>
       )}
@@ -378,10 +484,10 @@ function QuizTab({ quiz }: { quiz: any[] }) {
   );
 }
 
-// ─── Flashcards Tab ──────────────────────────────────────────────
 function FlashcardsTab({ cards }: { cards: any[] }) {
   const [flipped, setFlipped] = useState<Set<number>>(new Set());
-  if (cards.length === 0) return <div className="flashcards-empty">Flash kart bulunmamaktadır.</div>;
+  if (cards.length === 0)
+    return <div className="flashcards-empty">Flash kart bulunmamaktadır.</div>;
   return (
     <div className="flashcards-tab">
       <p className="flashcards-hint">Kartlara tıklayarak çevirin.</p>
@@ -414,12 +520,24 @@ function FlashcardsTab({ cards }: { cards: any[] }) {
   );
 }
 
-// ─── Notes Tab ───────────────────────────────────────────────────
-function NotesTab({ note, setNote, onSave, saved }: { note: string; setNote: (n: string) => void; onSave: () => void; saved: boolean }) {
+function NotesTab({
+  note,
+  setNote,
+  onSave,
+  saved,
+}: {
+  note: string;
+  setNote: (n: string) => void;
+  onSave: () => void;
+  saved: boolean;
+}) {
   return (
     <div className="notes-tab">
       <h3>Ders Notlarım</h3>
-      <p className="notes-hint">Bu derse ait kişisel notlarınızı buraya kaydedebilirsiniz. Notlar otomatik olarak veritabanında saklanır.</p>
+      <p className="notes-hint">
+        Bu derse ait kişisel notlarınızı buraya kaydedebilirsiniz. Notlar
+        otomatik olarak veritabanında saklanır.
+      </p>
       <textarea
         className="notes-textarea"
         value={note}
@@ -428,31 +546,51 @@ function NotesTab({ note, setNote, onSave, saved }: { note: string; setNote: (n:
         rows={12}
       />
       <div className="notes-actions">
-        <button className="btn btn-primary" onClick={onSave}>Kaydet</button>
+        <button className="btn btn-primary" onClick={onSave}>
+          Kaydet
+        </button>
         {saved && <span className="notes-saved">Kaydedildi ✓</span>}
       </div>
     </div>
   );
 }
 
-// ─── Related Tab ─────────────────────────────────────────────────
-function RelatedTab({ sections, siblings, currentSlug, onNavigate }: { sections: Record<string, any>; siblings: ContentNode[]; currentSlug: string; onNavigate: (slug: string) => void }) {
+function RelatedTab({
+  sections,
+  siblings,
+  currentSlug,
+  onNavigate,
+}: {
+  sections: Record<string, any>;
+  siblings: ContentNode[];
+  currentSlug: string;
+  onNavigate: (slug: string) => void;
+}) {
   const relatedSection = sections["ilgili_konular"];
   const relatedTitles = relatedSection?.items || [];
+  const sibLessons = siblings.filter((s) => s.slug !== currentSlug);
+  const extraTitles = relatedTitles.filter(
+    (t: string) => !siblings.some((s) => s.title === t)
+  );
+
   return (
     <div className="related-tab">
       <h3>İlgili Konular</h3>
-      {siblings.filter((s) => s.id !== currentSlug || relatedTitles.length > 0).length === 0 ? (
+      {sibLessons.length === 0 && extraTitles.length === 0 ? (
         <p>Bu derste ilgili konu bulunmamaktadır.</p>
       ) : (
         <div className="related-list">
-          {siblings.filter((s) => s.slug !== currentSlug).map((s) => (
-            <button key={s.id} className="related-card" onClick={() => onNavigate(s.slug)}>
+          {sibLessons.map((s) => (
+            <button
+              key={s.id}
+              className="related-card"
+              onClick={() => onNavigate(s.slug)}
+            >
               <span className="related-title">{s.title}</span>
               <span className="related-arrow">→</span>
             </button>
           ))}
-          {relatedTitles.filter((t: string) => !siblings.some((s) => s.title === t)).map((t: string, i: number) => (
+          {extraTitles.map((t: string, i: number) => (
             <div key={i} className="related-card static">
               <span className="related-title">{t}</span>
             </div>

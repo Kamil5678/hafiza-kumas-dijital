@@ -46,7 +46,6 @@ export default function App() {
   const [allLessons, setAllLessons] = useState<ContentNode[]>([]);
   const genAbortRef = useRef(false);
 
-  // Load roots + generation status on mount
   useEffect(() => {
     (async () => {
       const r = await fetchRoots();
@@ -56,7 +55,10 @@ export default function App() {
   }, []);
 
   const refreshGenStatus = async () => {
-    const [lessons, cachedSlugs] = await Promise.all([fetchAllLessons(), fetchCachedSlugs()]);
+    const [lessons, cachedSlugs] = await Promise.all([
+      fetchAllLessons(),
+      fetchCachedSlugs(),
+    ]);
     setAllLessons(lessons);
     const cachedCount = lessons.filter((l) => cachedSlugs.has(l.slug)).length;
     setGenStatus((prev) => ({
@@ -64,11 +66,13 @@ export default function App() {
       total: lessons.length,
       cached: cachedCount,
       remaining: lessons.length - cachedCount,
-      progress: lessons.length > 0 ? Math.round((cachedCount / lessons.length) * 100) : 0,
+      progress:
+        lessons.length > 0
+          ? Math.round((cachedCount / lessons.length) * 100)
+          : 0,
     }));
   };
 
-  // Generate all lessons sequentially
   const handleGenerateAll = async () => {
     if (genStatus.generating) return;
     genAbortRef.current = false;
@@ -114,12 +118,10 @@ export default function App() {
     genAbortRef.current = true;
   };
 
-  // Regenerate single lesson (admin)
   const handleRegenerate = async (slug: string) => {
     await generateLesson(slug, "intermediate", true);
   };
 
-  // Navigation
   const openModule = async (slug: string) => {
     const node = await fetchNode(slug);
     if (!node) return;
@@ -139,14 +141,9 @@ export default function App() {
     setView({ name: "lesson", slug });
   };
 
-  const handleNavigate = (slug: string) => {
-    openLesson(slug);
-  };
-
   const backToModule = () => {
     if (path.length >= 2) {
-      const moduleNode = path[0];
-      openModule(moduleNode.slug);
+      openModule(path[0].slug);
     } else {
       setView({ name: "dashboard" });
     }
@@ -156,9 +153,9 @@ export default function App() {
     setView({ name: "dashboard" });
   };
 
-  // ─── Dashboard View ─────────────────────────────────────────
   if (view.name === "dashboard") {
-    const allGenerated = genStatus.remaining === 0 && genStatus.total > 0;
+    const allGenerated =
+      genStatus.remaining === 0 && genStatus.total > 0;
     return (
       <div className="app">
         <header className="app-header">
@@ -169,19 +166,26 @@ export default function App() {
         </header>
 
         <main className="main-content">
-          {/* Generation Status Panel */}
-          <div className={`gen-panel ${allGenerated ? "complete" : ""} ${genStatus.generating ? "active" : ""}`}>
+          <div
+            className={`gen-panel ${allGenerated ? "complete" : ""} ${
+              genStatus.generating ? "active" : ""
+            }`}
+          >
             <div className="gen-panel-header">
               <h2>İçerik Üretim Durumu</h2>
               <div className="gen-stats">
                 <span className="gen-stat">
-                  <strong>{genStatus.cached}</strong> / {genStatus.total} ders hazır
+                  <strong>{genStatus.cached}</strong> / {genStatus.total} ders
+                  hazır
                 </span>
               </div>
             </div>
 
             <div className="progress-bar-container">
-              <div className="progress-bar" style={{ width: `${genStatus.progress}%` }} />
+              <div
+                className="progress-bar"
+                style={{ width: `${genStatus.progress}%` }}
+              />
               <span className="progress-label">{genStatus.progress}%</span>
             </div>
 
@@ -191,7 +195,9 @@ export default function App() {
                 <p>
                   Üretiliyor: <strong>{genStatus.currentTitle}</strong>
                 </p>
-                <span className="gen-remaining">Kalan: {genStatus.remaining} ders</span>
+                <span className="gen-remaining">
+                  Kalan: {genStatus.remaining} ders
+                </span>
               </div>
             )}
 
@@ -208,35 +214,49 @@ export default function App() {
 
             <div className="gen-actions">
               {!genStatus.generating && genStatus.remaining > 0 && (
-                <button className="btn btn-primary btn-large" onClick={handleGenerateAll}>
-                  {genStatus.cached > 0 ? `Üretmeye Devam Et (${genStatus.remaining} ders)` : `Tüm İçeriği Üret (${genStatus.total} ders)`}
+                <button
+                  className="btn btn-primary btn-large"
+                  onClick={handleGenerateAll}
+                >
+                  {genStatus.cached > 0
+                    ? `Üretmeye Devam Et (${genStatus.remaining} ders)`
+                    : `Tüm İçeriği Üret (${genStatus.total} ders)`}
                 </button>
               )}
               {genStatus.generating && (
-                <button className="btn btn-danger" onClick={handleStopGeneration}>
+                <button
+                  className="btn btn-danger"
+                  onClick={handleStopGeneration}
+                >
                   Üretimi Durdur
                 </button>
               )}
               {allGenerated && !genStatus.generating && (
                 <div className="gen-complete-msg">
                   <span className="check-icon">✓</span>
-                  <p>Tüm ders içerikleri hazır. Dersleri açtığınızda anında yüklenecektir.</p>
+                  <p>
+                    Tüm ders içerikleri hazır. Dersleri açtığınızda anında
+                    yüklenecektir.
+                  </p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Modules Grid */}
           <div className="modules-section">
             <h2 className="section-heading">Modüller</h2>
             <div className="modules-grid">
               {roots.map((m) => (
-                <button key={m.id} className="module-card" onClick={() => openModule(m.slug)}>
-                  <div className="module-card-icon">
-                    {moduleIcon(m.slug)}
-                  </div>
+                <button
+                  key={m.id}
+                  className="module-card"
+                  onClick={() => openModule(m.slug)}
+                >
+                  <div className="module-card-icon">{moduleIcon(m.slug)}</div>
                   <h3 className="module-card-title">{m.title}</h3>
-                  {m.description && <p className="module-card-desc">{m.description}</p>}
+                  {m.description && (
+                    <p className="module-card-desc">{m.description}</p>
+                  )}
                 </button>
               ))}
             </div>
@@ -246,7 +266,6 @@ export default function App() {
     );
   }
 
-  // ─── Module View ─────────────────────────────────────────────
   if (view.name === "module") {
     return (
       <div className="app">
@@ -269,21 +288,21 @@ export default function App() {
         <main className="main-content">
           <div className="module-header">
             <h1 className="page-title">{path[0]?.title}</h1>
-            {path[0]?.description && <p className="page-desc">{path[0].description}</p>}
+            {path[0]?.description && (
+              <p className="page-desc">{path[0].description}</p>
+            )}
           </div>
 
           <NodeTree
             nodes={moduleChildren}
             level={0}
             onOpenLesson={openLesson}
-            onOpenSubmodule={() => {}}
           />
         </main>
       </div>
     );
   }
 
-  // ─── Lesson View ─────────────────────────────────────────────
   if (view.name === "lesson" && lessonNode) {
     return (
       <div className="app">
@@ -306,7 +325,7 @@ export default function App() {
         <main className="main-content">
           <LessonView
             node={lessonNode}
-            onNavigate={handleNavigate}
+            onNavigate={openLesson}
             onBackToModule={backToModule}
             onBackToDashboard={backToDashboard}
             onRegenerate={handleRegenerate}
@@ -319,22 +338,24 @@ export default function App() {
   return null;
 }
 
-// ─── Node Tree (recursive) ─────────────────────────────────────
 function NodeTree({
   nodes,
   level,
   onOpenLesson,
-  onOpenSubmodule,
 }: {
   nodes: ContentNode[];
   level: number;
   onOpenLesson: (slug: string) => void;
-  onOpenSubmodule: (slug: string) => void;
 }) {
   return (
     <div className={`node-tree level-${level}`}>
       {nodes.map((node) => (
-        <NodeTreeItem key={node.id} node={node} level={level} onOpenLesson={onOpenLesson} onOpenSubmodule={onOpenSubmodule} />
+        <NodeTreeItem
+          key={node.id}
+          node={node}
+          level={level}
+          onOpenLesson={onOpenLesson}
+        />
       ))}
     </div>
   );
@@ -344,12 +365,10 @@ function NodeTreeItem({
   node,
   level,
   onOpenLesson,
-  onOpenSubmodule,
 }: {
   node: ContentNode;
   level: number;
   onOpenLesson: (slug: string) => void;
-  onOpenSubmodule: (slug: string) => void;
 }) {
   const [children, setChildren] = useState<ContentNode[]>([]);
   const [expanded, setExpanded] = useState(false);
@@ -364,7 +383,10 @@ function NodeTreeItem({
 
   if (node.type === "lesson") {
     return (
-      <button className="node-item lesson-item" onClick={() => onOpenLesson(node.slug)}>
+      <button
+        className="node-item lesson-item"
+        onClick={() => onOpenLesson(node.slug)}
+      >
         <span className="node-icon">📄</span>
         <span className="node-title">{node.title}</span>
       </button>
@@ -379,7 +401,11 @@ function NodeTreeItem({
         <span className="node-title">{node.title}</span>
       </button>
       {expanded && children.length > 0 && (
-        <NodeTree nodes={children} level={level + 1} onOpenLesson={onOpenLesson} onOpenSubmodule={onOpenSubmodule} />
+        <NodeTree
+          nodes={children}
+          level={level + 1}
+          onOpenLesson={onOpenLesson}
+        />
       )}
     </div>
   );
@@ -390,9 +416,9 @@ function moduleIcon(slug: string): string {
     "tekstil-bilgileri": "🧵",
     "moda-bilgileri": "👗",
     "ic-giyim": "👕",
-    "surdurulebilirlik": "♻️",
-    "strateji": "📊",
-    "istatistik": "📈",
+    surdurulebilirlik: "♻️",
+    strateji: "📊",
+    istatistik: "📈",
     "elise-studio": "🎨",
     "bilgi-bankasi": "📚",
   };

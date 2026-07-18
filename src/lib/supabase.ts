@@ -52,12 +52,12 @@ export async function fetchPath(slug: string): Promise<ContentNode[]> {
   while (current) {
     path.unshift(current);
     if (!current.parent_id) break;
-    const parent = await supabase
+    const { data: parent } = await supabase
       .from("content_nodes")
       .select("*")
       .eq("id", current.parent_id)
       .single();
-    if (parent.data) current = parent.data as ContentNode;
+    if (parent) current = parent as ContentNode;
     else break;
   }
   return path;

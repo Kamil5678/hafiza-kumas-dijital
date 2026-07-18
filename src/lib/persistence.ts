@@ -19,6 +19,7 @@ function packageName(category: string, size: number): string {
   const stamp = new Date().toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
+  year: "numeric",
   });
   return `${category} · ${size} topics · ${stamp}`;
 }
@@ -158,6 +159,41 @@ export async function distributeToDailyPlan(
     return {
       ok: false,
       message: `Unexpected error while distributing: ${(e as Error).message}`,
+    };
+  }
+}
+
+export interface SavedPackageRow {
+  id: string;
+  name: string;
+  size: number;
+  category: string;
+  created_at: string;
+}
+
+export async function fetchSavedPackages(): Promise<{
+  ok: boolean;
+  packages: SavedPackageRow[];
+  message: string;
+}> {
+  if (!supabaseConfigured) {
+    return { ok: false, packages: [], message: "Database not configured." };
+  }
+  try {
+    const { data, error } = await supabase
+      .from("saved_packages")
+      .select("id, name, size, category, created_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return { ok: false, packages: [], message: error.message };
+    }
+    return { ok: true, packages: data ?? [], message: "" };
+  } catch (e) {
+    return {
+      ok: false,
+      packages: [],
+      message: (e as Error).message,
     };
   }
 }

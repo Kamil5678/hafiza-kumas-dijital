@@ -9,56 +9,21 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TakvimRouteImport } from './routes/takvim'
-import { Route as QuizRouteImport } from './routes/quiz'
-import { Route as PdfKutuphaneRouteImport } from './routes/pdf-kutuphane'
-import { Route as PdfRouteImport } from './routes/pdf'
-import { Route as HaftalikTekrarRouteImport } from './routes/haftalik-tekrar'
-import { Route as GunlukTekrarRouteImport } from './routes/gunluk-tekrar'
-import { Route as GorevlerRouteImport } from './routes/gorevler'
-import { Route as EliseStudioRouteImport } from './routes/elise-studio'
-import { Route as BilgiBankasiRouteImport } from './routes/bilgi-bankasi'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BilgiBankasiRouteImport } from './routes/bilgi-bankasi'
+import { Route as EliseStudioRouteImport } from './routes/elise-studio'
+import { Route as GorevlerRouteImport } from './routes/gorevler'
+import { Route as GunlukTekrarRouteImport } from './routes/gunluk-tekrar'
+import { Route as HaftalikTekrarRouteImport } from './routes/haftalik-tekrar'
+import { Route as PdfRouteImport } from './routes/pdf'
+import { Route as PdfKutuphaneRouteImport } from './routes/pdf-kutuphane'
+import { Route as QuizRouteImport } from './routes/quiz'
+import { Route as TakvimRouteImport } from './routes/takvim'
 import { Route as KategoriSlugRouteImport } from './routes/kategori.$slug'
 
-const TakvimRoute = TakvimRouteImport.update({
-  id: '/takvim',
-  path: '/takvim',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const QuizRoute = QuizRouteImport.update({
-  id: '/quiz',
-  path: '/quiz',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PdfKutuphaneRoute = PdfKutuphaneRouteImport.update({
-  id: '/pdf-kutuphane',
-  path: '/pdf-kutuphane',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PdfRoute = PdfRouteImport.update({
-  id: '/pdf',
-  path: '/pdf',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HaftalikTekrarRoute = HaftalikTekrarRouteImport.update({
-  id: '/haftalik-tekrar',
-  path: '/haftalik-tekrar',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GunlukTekrarRoute = GunlukTekrarRouteImport.update({
-  id: '/gunluk-tekrar',
-  path: '/gunluk-tekrar',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GorevlerRoute = GorevlerRouteImport.update({
-  id: '/gorevler',
-  path: '/gorevler',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EliseStudioRoute = EliseStudioRouteImport.update({
-  id: '/elise-studio',
-  path: '/elise-studio',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BilgiBankasiRoute = BilgiBankasiRouteImport.update({
@@ -66,9 +31,44 @@ const BilgiBankasiRoute = BilgiBankasiRouteImport.update({
   path: '/bilgi-bankasi',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const EliseStudioRoute = EliseStudioRouteImport.update({
+  id: '/elise-studio',
+  path: '/elise-studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GorevlerRoute = GorevlerRouteImport.update({
+  id: '/gorevler',
+  path: '/gorevler',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GunlukTekrarRoute = GunlukTekrarRouteImport.update({
+  id: '/gunluk-tekrar',
+  path: '/gunluk-tekrar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HaftalikTekrarRoute = HaftalikTekrarRouteImport.update({
+  id: '/haftalik-tekrar',
+  path: '/haftalik-tekrar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PdfRoute = PdfRouteImport.update({
+  id: '/pdf',
+  path: '/pdf',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PdfKutuphaneRoute = PdfKutuphaneRouteImport.update({
+  id: '/pdf-kutuphane',
+  path: '/pdf-kutuphane',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QuizRoute = QuizRouteImport.update({
+  id: '/quiz',
+  path: '/quiz',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TakvimRoute = TakvimRouteImport.update({
+  id: '/takvim',
+  path: '/takvim',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KategoriSlugRoute = KategoriSlugRouteImport.update({
@@ -175,60 +175,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/takvim': {
-      id: '/takvim'
-      path: '/takvim'
-      fullPath: '/takvim'
-      preLoaderRoute: typeof TakvimRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/quiz': {
-      id: '/quiz'
-      path: '/quiz'
-      fullPath: '/quiz'
-      preLoaderRoute: typeof QuizRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pdf-kutuphane': {
-      id: '/pdf-kutuphane'
-      path: '/pdf-kutuphane'
-      fullPath: '/pdf-kutuphane'
-      preLoaderRoute: typeof PdfKutuphaneRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pdf': {
-      id: '/pdf'
-      path: '/pdf'
-      fullPath: '/pdf'
-      preLoaderRoute: typeof PdfRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/haftalik-tekrar': {
-      id: '/haftalik-tekrar'
-      path: '/haftalik-tekrar'
-      fullPath: '/haftalik-tekrar'
-      preLoaderRoute: typeof HaftalikTekrarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/gunluk-tekrar': {
-      id: '/gunluk-tekrar'
-      path: '/gunluk-tekrar'
-      fullPath: '/gunluk-tekrar'
-      preLoaderRoute: typeof GunlukTekrarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/gorevler': {
-      id: '/gorevler'
-      path: '/gorevler'
-      fullPath: '/gorevler'
-      preLoaderRoute: typeof GorevlerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/elise-studio': {
-      id: '/elise-studio'
-      path: '/elise-studio'
-      fullPath: '/elise-studio'
-      preLoaderRoute: typeof EliseStudioRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/bilgi-bankasi': {
@@ -238,11 +189,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BilgiBankasiRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/elise-studio': {
+      id: '/elise-studio'
+      path: '/elise-studio'
+      fullPath: '/elise-studio'
+      preLoaderRoute: typeof EliseStudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gorevler': {
+      id: '/gorevler'
+      path: '/gorevler'
+      fullPath: '/gorevler'
+      preLoaderRoute: typeof GorevlerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gunluk-tekrar': {
+      id: '/gunluk-tekrar'
+      path: '/gunluk-tekrar'
+      fullPath: '/gunluk-tekrar'
+      preLoaderRoute: typeof GunlukTekrarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/haftalik-tekrar': {
+      id: '/haftalik-tekrar'
+      path: '/haftalik-tekrar'
+      fullPath: '/haftalik-tekrar'
+      preLoaderRoute: typeof HaftalikTekrarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pdf': {
+      id: '/pdf'
+      path: '/pdf'
+      fullPath: '/pdf'
+      preLoaderRoute: typeof PdfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pdf-kutuphane': {
+      id: '/pdf-kutuphane'
+      path: '/pdf-kutuphane'
+      fullPath: '/pdf-kutuphane'
+      preLoaderRoute: typeof PdfKutuphaneRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/quiz': {
+      id: '/quiz'
+      path: '/quiz'
+      fullPath: '/quiz'
+      preLoaderRoute: typeof QuizRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/takvim': {
+      id: '/takvim'
+      path: '/takvim'
+      fullPath: '/takvim'
+      preLoaderRoute: typeof TakvimRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kategori/$slug': {
@@ -271,3 +271,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

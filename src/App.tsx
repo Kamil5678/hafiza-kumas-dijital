@@ -21,7 +21,6 @@ interface GenStatus {
   cached: number;
   remaining: number;
   generating: boolean;
-  current: string | null;
   currentTitle: string | null;
   progress: number;
   errors: string[];
@@ -38,12 +37,12 @@ export default function App() {
     cached: 0,
     remaining: 0,
     generating: false,
-    current: null,
     currentTitle: null,
     progress: 0,
     errors: [],
   });
   const [allLessons, setAllLessons] = useState<ContentNode[]>([]);
+  const [genExpanded, setGenExpanded] = useState(false);
   const genAbortRef = useRef(false);
 
   useEffect(() => {
@@ -87,7 +86,6 @@ export default function App() {
       if (genAbortRef.current) break;
       setGenStatus((prev) => ({
         ...prev,
-        current: lesson.slug,
         currentTitle: lesson.title,
       }));
       try {
@@ -108,7 +106,6 @@ export default function App() {
     setGenStatus((prev) => ({
       ...prev,
       generating: false,
-      current: null,
       currentTitle: null,
     }));
     await refreshGenStatus();
@@ -153,176 +150,91 @@ export default function App() {
     setView({ name: "dashboard" });
   };
 
-  if (view.name === "dashboard") {
-    const allGenerated =
-      genStatus.remaining === 0 && genStatus.total > 0;
-    return (
-      <div className="app">
-        <header className="app-header">
-          <div className="header-content">
-            <h1 className="app-title">Tekstil Bilgi İşletim Sistemi</h1>
-            <p className="app-subtitle">Merkezi AI İçerik Motoru</p>
-          </div>
-        </header>
+  const allGenerated = genStatus.remaining === 0 && genStatus.total > 0;
 
-        <main className="main-content">
-          <div
-            className={`gen-panel ${allGenerated ? "complete" : ""} ${
-              genStatus.generating ? "active" : ""
-            }`}
-          >
-            <div className="gen-panel-header">
-              <h2>İçerik Üretim Durumu</h2>
-              <div className="gen-stats">
-                <span className="gen-stat">
-                  <strong>{genStatus.cached}</strong> / {genStatus.total} ders
-                  hazır
-                </span>
-              </div>
-            </div>
-
-            <div className="progress-bar-container">
-              <div
-                className="progress-bar"
-                style={{ width: `${genStatus.progress}%` }}
-              />
-              <span className="progress-label">{genStatus.progress}%</span>
-            </div>
-
-            {genStatus.generating && (
-              <div className="gen-active-info">
-                <div className="spinner small" />
-                <p>
-                  Üretiliyor: <strong>{genStatus.currentTitle}</strong>
-                </p>
-                <span className="gen-remaining">
-                  Kalan: {genStatus.remaining} ders
-                </span>
-              </div>
-            )}
-
-            {genStatus.errors.length > 0 && (
-              <div className="gen-errors">
-                <p>Hatalar ({genStatus.errors.length}):</p>
-                <ul>
-                  {genStatus.errors.slice(-5).map((e, i) => (
-                    <li key={i}>{e}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <div className="gen-actions">
-              {!genStatus.generating && genStatus.remaining > 0 && (
-                <button
-                  className="btn btn-primary btn-large"
-                  onClick={handleGenerateAll}
-                >
-                  {genStatus.cached > 0
-                    ? `Üretmeye Devam Et (${genStatus.remaining} ders)`
-                    : `Tüm İçeriği Üret (${genStatus.total} ders)`}
-                </button>
-              )}
-              {genStatus.generating && (
-                <button
-                  className="btn btn-danger"
-                  onClick={handleStopGeneration}
-                >
-                  Üretimi Durdur
-                </button>
-              )}
-              {allGenerated && !genStatus.generating && (
-                <div className="gen-complete-msg">
-                  <span className="check-icon">✓</span>
-                  <p>
-                    Tüm ders içerikleri hazır. Dersleri açtığınızda anında
-                    yüklenecektir.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="modules-section">
-            <h2 className="section-heading">Modüller</h2>
-            <div className="modules-grid">
-              {roots.map((m) => (
-                <button
-                  key={m.id}
-                  className="module-card"
-                  onClick={() => openModule(m.slug)}
-                >
-                  <div className="module-card-icon">{moduleIcon(m.slug)}</div>
-                  <h3 className="module-card-title">{m.title}</h3>
-                  {m.description && (
-                    <p className="module-card-desc">{m.description}</p>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  if (view.name === "module") {
-    return (
-      <div className="app">
-        <header className="app-header">
-          <div className="header-content">
-            <button className="btn btn-ghost back-btn" onClick={backToDashboard}>
-              ← Panele Dön
-            </button>
-            <nav className="breadcrumbs">
+  return (
+    <div className="app">
+      <header className="topbar">
+        <div className="topbar-inner">
+          <button className="brand" onClick={backToDashboard}>
+            <span className="brand-mark" />
+            <span className="brand-text">Tekstil KOS</span>
+          </button>
+          {view.name !== "dashboard" && path.length > 0 && (
+            <nav className="crumbs">
               {path.map((n, i) => (
-                <span key={n.id} className="breadcrumb-item">
-                  {i > 0 && <span className="breadcrumb-sep">/</span>}
-                  {n.title}
+                <span key={n.id} className="crumb">
+                  {i > 0 && <span className="crumb-sep">·</span>}
+                  <button
+                    className="crumb-link"
+                    onClick={() => {
+                      if (i === 0) openModule(n.slug);
+                      else if (n.type === "lesson") openLesson(n.slug);
+                      else openModule(path[0].slug);
+                    }}
+                  >
+                    {n.title}
+                  </button>
                 </span>
               ))}
             </nav>
+          )}
+        </div>
+      </header>
+
+      <main className="content">
+        {view.name === "dashboard" && (
+          <div className="dashboard">
+            <div className="hero">
+              <h1 className="hero-title">Bilgi İşletim Sistemi</h1>
+              <p className="hero-sub">
+                Tekstil ve moda sektörü için merkezi içerik platformu
+              </p>
+            </div>
+
+            <section className="modules">
+              <h2 className="modules-label">Modüller</h2>
+              <div className="module-list">
+                {roots.map((m) => (
+                  <button
+                    key={m.id}
+                    className="module-item"
+                    onClick={() => openModule(m.slug)}
+                  >
+                    <span className="module-num">
+                      {moduleIcon(m.slug)}
+                    </span>
+                    <div className="module-meta">
+                      <span className="module-name">{m.title}</span>
+                      {m.description && (
+                        <span className="module-desc">{m.description}</span>
+                      )}
+                    </div>
+                    <span className="module-arrow">→</span>
+                  </button>
+                ))}
+              </div>
+            </section>
           </div>
-        </header>
+        )}
 
-        <main className="main-content">
-          <div className="module-header">
-            <h1 className="page-title">{path[0]?.title}</h1>
-            {path[0]?.description && (
-              <p className="page-desc">{path[0].description}</p>
-            )}
+        {view.name === "module" && (
+          <div className="module-page">
+            <div className="page-head">
+              <h1 className="page-title">{path[0]?.title}</h1>
+              {path[0]?.description && (
+                <p className="page-desc">{path[0].description}</p>
+              )}
+            </div>
+            <NodeTree
+              nodes={moduleChildren}
+              level={0}
+              onOpenLesson={openLesson}
+            />
           </div>
+        )}
 
-          <NodeTree
-            nodes={moduleChildren}
-            level={0}
-            onOpenLesson={openLesson}
-          />
-        </main>
-      </div>
-    );
-  }
-
-  if (view.name === "lesson" && lessonNode) {
-    return (
-      <div className="app">
-        <header className="app-header">
-          <div className="header-content">
-            <button className="btn btn-ghost back-btn" onClick={backToDashboard}>
-              ← Panele Dön
-            </button>
-            <nav className="breadcrumbs">
-              {path.map((n, i) => (
-                <span key={n.id} className="breadcrumb-item">
-                  {i > 0 && <span className="breadcrumb-sep">/</span>}
-                  {n.title}
-                </span>
-              ))}
-            </nav>
-          </div>
-        </header>
-
-        <main className="main-content">
+        {view.name === "lesson" && lessonNode && (
           <LessonView
             node={lessonNode}
             onNavigate={openLesson}
@@ -330,12 +242,89 @@ export default function App() {
             onBackToDashboard={backToDashboard}
             onRegenerate={handleRegenerate}
           />
-        </main>
-      </div>
-    );
-  }
+        )}
+      </main>
 
-  return null;
+      {/* Compact generation status bar — fixed at bottom */}
+      <div className={`gen-bar ${genExpanded ? "expanded" : ""} ${genStatus.generating ? "active" : ""} ${allGenerated ? "done" : ""}`}>
+        <button
+          className="gen-bar-toggle"
+          onClick={() => setGenExpanded(!genExpanded)}
+        >
+          <div className="gen-bar-info">
+            {genStatus.generating ? (
+              <>
+                <span className="gen-dot pulse" />
+                <span className="gen-bar-text">
+                  Üretiliyor: <strong>{genStatus.currentTitle}</strong>
+                </span>
+                <span className="gen-bar-count">{genStatus.remaining} kaldı</span>
+              </>
+            ) : allGenerated ? (
+              <>
+                <span className="gen-dot done" />
+                <span className="gen-bar-text">Tüm içerik hazır</span>
+              </>
+            ) : (
+              <>
+                <span className="gen-dot" />
+                <span className="gen-bar-text">
+                  {genStatus.cached} / {genStatus.total} ders hazır
+                </span>
+              </>
+            )}
+          </div>
+          <span className="gen-bar-pct">{genStatus.progress}%</span>
+        </button>
+
+        <div className="gen-bar-track">
+          <div
+            className="gen-bar-fill"
+            style={{ width: `${genStatus.progress}%` }}
+          />
+        </div>
+
+        {genExpanded && (
+          <div className="gen-bar-detail">
+            {genStatus.errors.length > 0 && (
+              <div className="gen-bar-errors">
+                <span className="gen-bar-errors-label">
+                  Hatalar ({genStatus.errors.length}):
+                </span>
+                <ul>
+                  {genStatus.errors.slice(-3).map((e, i) => (
+                    <li key={i}>{e}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div className="gen-bar-actions">
+              {!genStatus.generating && genStatus.remaining > 0 && (
+                <button
+                  className="gen-btn primary"
+                  onClick={handleGenerateAll}
+                >
+                  {genStatus.cached > 0
+                    ? `Üretmeye Devam Et (${genStatus.remaining})`
+                    : `Tüm İçeriği Üret (${genStatus.total})`}
+                </button>
+              )}
+              {genStatus.generating && (
+                <button className="gen-btn stop" onClick={handleStopGeneration}>
+                  Durdur
+                </button>
+              )}
+              {allGenerated && !genStatus.generating && (
+                <span className="gen-bar-done-msg">
+                  Dersler açıldığında anında yüklenecektir.
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function NodeTree({
@@ -348,7 +337,7 @@ function NodeTree({
   onOpenLesson: (slug: string) => void;
 }) {
   return (
-    <div className={`node-tree level-${level}`}>
+    <div className={`tree level-${level}`}>
       {nodes.map((node) => (
         <NodeTreeItem
           key={node.id}
@@ -384,21 +373,21 @@ function NodeTreeItem({
   if (node.type === "lesson") {
     return (
       <button
-        className="node-item lesson-item"
+        className="tree-item lesson"
         onClick={() => onOpenLesson(node.slug)}
       >
-        <span className="node-icon">📄</span>
-        <span className="node-title">{node.title}</span>
+        <span className="tree-leaf" />
+        <span className="tree-text">{node.title}</span>
       </button>
     );
   }
 
   return (
-    <div className="node-branch">
-      <button className="node-item branch-item" onClick={toggle}>
-        <span className="node-icon">{expanded ? "▼" : "▶"}</span>
-        <span className="node-type-badge">{node.type}</span>
-        <span className="node-title">{node.title}</span>
+    <div className="tree-branch">
+      <button className="tree-item branch" onClick={toggle}>
+        <span className="tree-toggle">{expanded ? "−" : "+"}</span>
+        <span className="tree-tag">{node.type}</span>
+        <span className="tree-text">{node.title}</span>
       </button>
       {expanded && children.length > 0 && (
         <NodeTree
@@ -413,14 +402,14 @@ function NodeTreeItem({
 
 function moduleIcon(slug: string): string {
   const icons: Record<string, string> = {
-    "tekstil-bilgileri": "🧵",
-    "moda-bilgileri": "👗",
-    "ic-giyim": "👕",
-    surdurulebilirlik: "♻️",
-    strateji: "📊",
-    istatistik: "📈",
-    "elise-studio": "🎨",
-    "bilgi-bankasi": "📚",
+    "tekstil-bilgileri": "01",
+    "moda-bilgileri": "02",
+    "ic-giyim": "03",
+    surdurulebilirlik: "04",
+    strateji: "05",
+    istatistik: "06",
+    "elise-studio": "07",
+    "bilgi-bankasi": "08",
   };
-  return icons[slug] || "📦";
+  return icons[slug] || "·";
 }

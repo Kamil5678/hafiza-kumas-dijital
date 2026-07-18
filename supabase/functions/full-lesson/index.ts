@@ -3,8 +3,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "Content-Type, Authorization, X-Client-Info, Apikey",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
 function seededRandom(seed: number) {
@@ -19,10 +18,6 @@ function slugToSeed(slug: string): number {
   let h = 0;
   for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) % 233280;
   return h + 1;
-}
-
-function pick<T>(rng: () => number, arr: T[]): T {
-  return arr[Math.floor(rng() * arr.length)];
 }
 
 function shuffle<T>(rng: () => number, arr: T[]): T[] {
@@ -253,188 +248,34 @@ function findModuleSlug(node: any, allNodes: any[]): string {
   return current?.slug || "genel";
 }
 
-function buildSections(
-  node: any,
-  profile: DomainProfile,
-  children: any[],
-  siblings: any[],
-  rng: () => number
-): any {
+function buildSections(node: any, profile: DomainProfile, children: any[], siblings: any[], rng: () => number): any {
   const title = node.title;
   const desc = node.description || `${title} konusunun detaylı incelenmesi.`;
   const moduleTitle = profile.moduleSlug.replace(/-/g, " ");
-
   const sections: Record<string, any> = {};
 
-  sections["ogrenme_hedefleri"] = {
-    title: "Öğrenme Hedefleri",
-    type: "list",
-    items: [
-      `${title} kavramını tanımlayabilme`,
-      `${title} kapsamında temel süreçleri açıklayabilme`,
-      `${title} ile ilgili teknik parametreleri hesaplayabilme`,
-      `${title} uygulamalarını endüstriyel örneklerle analiz edebilme`,
-      `${title} konusundaki kalite kriterlerini değerlendirebilme`,
-    ],
-  };
-
-  sections["giris"] = {
-    title: "Giriş",
-    type: "text",
-    content: `${title}, ${moduleTitle} alanının temel konularından biridir. ${desc} Bu bölümde ${title.toLowerCase()} kavramı, temel ilkeleri, endüstriyel uygulamaları ve kalite parametreleri açısından kapsamlı biçimde ele alınacaktır. Konu, teorik temellerden pratik uygulamalara doğru bir sırayla yapılandırılmıştır.`,
-  };
-
-  sections["tanim_ve_kavramlar"] = {
-    title: "Tanım ve Kavramlar",
-    type: "text",
-    content: `${title}, ${profile.keywords.slice(0, 3).join(", ")} bağlamında tanımlandığında, ${desc.toLowerCase()} Bu kavramın doğru anlaşılması için ${profile.keywords[0]} ve ${profile.keywords[1] || profile.keywords[0]} arasındaki ilişkinin kavranması gerekir.`,
-  };
-
-  sections["tarihsel_gelisim"] = {
-    title: "Tarihsel Gelişim",
-    type: "text",
-    content: `${title} kavramı, endüstriyel gelişim sürecinde önemli dönüşümler geçirmiştir. İlk uygulamalar ${profile.keywords[0]} üzerine kuruludur. Modern dönemde ${profile.machines[0]} ve ${profile.machines[1] || profile.machines[0]} kullanımı ile süreçler standartlaştırılmıştır.`,
-  };
-
-  sections["temel_ilkeler"] = {
-    title: "Temel İlkeler",
-    type: "list",
-    items: [
-      `${title} sürecinde ${profile.properties[0]} gözetilir`,
-      `${profile.keywords[0]} ve ${profile.keywords[1] || profile.keywords[0]} dengesi korunur`,
-      `${profile.standards[0]} standardı referans alınır`,
-      `${profile.processes[0]} adımı özenle uygulanır`,
-    ],
-  };
-
-  sections["siniflandirma"] = {
-    title: "Sınıflandırma",
-    type: "table",
-    headers: ["Kategori", "Özellik", "Kullanım Alanı"],
-    rows: profile.materials.slice(0, 4).map((m, i) => [
-      m,
-      profile.properties[i % profile.properties.length],
-      profile.applications[i % profile.applications.length],
-    ]),
-  };
-
-  sections["teknik_parametreler"] = {
-    title: "Teknik Parametreler",
-    type: "table",
-    headers: ["Parametre", "Birim", "Tipik Değer"],
-    rows: profile.properties.slice(0, 5).map((p, i) => [
-      p,
-      i % 2 === 0 ? "g/m²" : "%",
-      i % 2 === 0 ? `${15 + i * 10}-${25 + i * 10}` : `${2 + i}-${5 + i}`,
-    ]),
-  };
-
-  sections["malzemeler"] = {
-    title: "Malzemeler",
-    type: "list",
-    items: profile.materials.slice(0, 5).map((m) => `${m}: ${title} sürecinde kullanılan temel malzeme`),
-  };
-
-  sections["makine_ve_ekipmanlar"] = {
-    title: "Makine ve Ekipmanlar",
-    type: "list",
-    items: profile.machines.slice(0, 5).map((m) => `${m}: ${title} üretiminde kullanılan ekipman`),
-  };
-
-  sections["uretim_sureci"] = {
-    title: "Üretim Süreci",
-    type: "text",
-    content: `${title} üretim süreci şu adımları içerir: ${profile.processes.slice(0, 5).join(" → ")}. Sürecin her adımında ${profile.standards[0]} standardına uyum sağlanır ve ${profile.properties[0]} kontrol edilir.`,
-  };
-
-  sections["kalite_kontrol"] = {
-    title: "Kalite Kontrol",
-    type: "text",
-    content: `Kalite kontrol aşamasında ${profile.properties.slice(0, 3).join(", ")} parametreleri ölçülür. ${profile.standards[0]} ve ${profile.standards[1] || profile.standards[0]} standartlarına göre değerlendirme yapılır. Uygun olmayan ürünler tespit edilip ${profile.processes[0]} adımına geri gönderilir.`,
-  };
-
-  sections["uygulama_alanlari"] = {
-    title: "Uygulama Alanları",
-    type: "list",
-    items: profile.applications.map((a) => `${a}: ${title} uygulamasının kullanıldığı sektör`),
-  };
-
-  sections["avantajlar"] = {
-    title: "Avantajlar",
-    type: "list",
-    items: [
-      `${profile.properties[0]} bakımından yüksek performans`,
-      `${profile.standards[0]} uyumu ile güvenilirlik`,
-      `${profile.processes[0]} verimliliği`,
-      `${profile.applications[0]} alanında geniş kullanım`,
-    ],
-  };
-
-  sections["dezavantajlar"] = {
-    title: "Dezavantajlar",
-    type: "list",
-    items: [
-      `${profile.properties[0]} değerinde dalgalanma riski`,
-      `${profile.machines[0]} yatırım maliyeti`,
-      `${profile.processes[0]} adımında uzmanlık gereksinimi`,
-      `${profile.standards[0]} uyum maliyeti`,
-    ],
-  };
-
-  sections["standartlar_ve_normlar"] = {
-    title: "Standartlar ve Normlar",
-    type: "table",
-    headers: ["Standart", "Kapsam"],
-    rows: profile.standards.slice(0, 5).map((s) => [s, `${title} kalite kriterleri`]),
-  };
-
-  sections["sik_yapilan_hatalar"] = {
-    title: "Sık Yapılan Hatalar",
-    type: "list",
-    items: [
-      `${profile.properties[0]} değerinin yanlış ölçülmesi`,
-      `${profile.processes[0]} adımında ${profile.standards[0]} dışına çıkılması`,
-      `${profile.machines[0]} ayarlarının hatalı yapılması`,
-      `${profile.materials[0]} seçiminde uygun olmayan kalitenin kullanılması`,
-    ],
-  };
-
-  sections["vaka_calismasi"] = {
-    title: "Vaka Çalışması",
-    type: "text",
-    content: `Bir ${profile.applications[0]} firmasında ${title} uygulaması: Üretim hattında ${profile.machines[0]} kullanılarak ${profile.properties[0]} %${15 + Math.floor(rng() * 20)} artırılmıştır. Kalite kontrol sonucunda ${profile.standards[0]} uyumu sağlanmış ve müşteri reddi oranı %${Math.floor(rng() * 5)}'e düşmüştür.`,
-  };
-
-  sections["ozet"] = {
-    title: "Özet",
-    type: "text",
-    content: `${title}, ${moduleTitle} alanında ${profile.properties[0]} ve ${profile.standards[0]} çerçevesinde yürütülen kritik bir süreçtir. Bu bölümde ${title.toLowerCase()} kavramı, temel ilkeleri, teknik parametreleri ve endüstriyel uygulamaları ile birlikte ele alınmıştır.`,
-  };
-
-  sections["terimler_sozlugu"] = {
-    title: "Terimler Sözlüğü",
-    type: "glossary",
-    items: Object.entries(profile.glossary).slice(0, 8).map(([term, def]) => ({ term, definition: def })),
-  };
-
-  sections["ilgili_konular"] = {
-    title: "İlgili Konular",
-    type: "list",
-    items: siblings.filter((s) => s.id !== node.id).slice(0, 5).map((s) => s.title),
-  };
-
-  sections["referanslar"] = {
-    title: "Referanslar",
-    type: "list",
-    items: profile.references,
-  };
-
-  sections["gorsel_sema"] = {
-    title: "Görsel Şema",
-    type: "diagram",
-    prompt: `${title} sürecinin akış şeması: ${profile.processes.slice(0, 5).join(" → ")} adımlarını gösteren teknik diyagram, ${profile.moduleSlug} alanı`,
-    caption: `${title} üretim akış şeması`,
-  };
+  sections["ogrenme_hedefleri"] = { title: "Öğrenme Hedefleri", type: "list", items: [`${title} kavramını tanımlayabilme`, `${title} kapsamında temel süreçleri açıklayabilme`, `${title} ile ilgili teknik parametreleri hesaplayabilme`, `${title} uygulamalarını endüstriyel örneklerle analiz edebilme`, `${title} konusundaki kalite kriterlerini değerlendirebilme`] };
+  sections["giris"] = { title: "Giriş", type: "text", content: `${title}, ${moduleTitle} alanının temel konularından biridir. ${desc} Bu bölümde ${title.toLowerCase()} kavramı, temel ilkeleri, endüstriyel uygulamaları ve kalite parametreleri açısından kapsamlı biçimde ele alınacaktır.` };
+  sections["tanim_ve_kavramlar"] = { title: "Tanım ve Kavramlar", type: "text", content: `${title}, ${profile.keywords.slice(0, 3).join(", ")} bağlamında tanımlandığında, ${desc.toLowerCase()}` };
+  sections["tarihsel_gelisim"] = { title: "Tarihsel Gelişim", type: "text", content: `${title} kavramı, endüstriyel gelişim sürecinde önemli dönüşümler geçirmiştir. İlk uygulamalar ${profile.keywords[0]} üzerine kuruludur. Modern dönemde ${profile.machines[0]} kullanımı ile süreçler standartlaştırılmıştır.` };
+  sections["temel_ilkeler"] = { title: "Temel İlkeler", type: "list", items: [`${title} sürecinde ${profile.properties[0]} gözetilir`, `${profile.keywords[0]} ve ${profile.keywords[1] || profile.keywords[0]} dengesi korunur`, `${profile.standards[0]} standardı referans alınır`, `${profile.processes[0]} adımı özenle uygulanır`] };
+  sections["siniflandirma"] = { title: "Sınıflandırma", type: "table", headers: ["Kategori", "Özellik", "Kullanım Alanı"], rows: profile.materials.slice(0, 4).map((m, i) => [m, profile.properties[i % profile.properties.length], profile.applications[i % profile.applications.length]]) };
+  sections["teknik_parametreler"] = { title: "Teknik Parametreler", type: "table", headers: ["Parametre", "Birim", "Tipik Değer"], rows: profile.properties.slice(0, 5).map((p, i) => [p, i % 2 === 0 ? "g/m²" : "%", i % 2 === 0 ? `${15 + i * 10}-${25 + i * 10}` : `${2 + i}-${5 + i}`]) };
+  sections["malzemeler"] = { title: "Malzemeler", type: "list", items: profile.materials.slice(0, 5).map((m) => `${m}: ${title} sürecinde kullanılan temel malzeme`) };
+  sections["makine_ve_ekipmanlar"] = { title: "Makine ve Ekipmanlar", type: "list", items: profile.machines.slice(0, 5).map((m) => `${m}: ${title} üretiminde kullanılan ekipman`) };
+  sections["uretim_sureci"] = { title: "Üretim Süreci", type: "text", content: `${title} üretim süreci şu adımları içerir: ${profile.processes.slice(0, 5).join(" → ")}. Sürecin her adımında ${profile.standards[0]} standardına uyum sağlanır.` };
+  sections["kalite_kontrol"] = { title: "Kalite Kontrol", type: "text", content: `Kalite kontrol aşamasında ${profile.properties.slice(0, 3).join(", ")} parametreleri ölçülür. ${profile.standards[0]} standartlarına göre değerlendirme yapılır.` };
+  sections["uygulama_alanlari"] = { title: "Uygulama Alanları", type: "list", items: profile.applications.map((a) => `${a}: ${title} uygulamasının kullanıldığı sektör`) };
+  sections["avantajlar"] = { title: "Avantajlar", type: "list", items: [`${profile.properties[0]} bakımından yüksek performans`, `${profile.standards[0]} uyumu ile güvenilirlik`, `${profile.processes[0]} verimliliği`, `${profile.applications[0]} alanında geniş kullanım`] };
+  sections["dezavantajlar"] = { title: "Dezavantajlar", type: "list", items: [`${profile.properties[0]} değerinde dalgalanma riski`, `${profile.machines[0]} yatırım maliyeti`, `${profile.processes[0]} adımında uzmanlık gereksinimi`, `${profile.standards[0]} uyum maliyeti`] };
+  sections["standartlar_ve_normlar"] = { title: "Standartlar ve Normlar", type: "table", headers: ["Standart", "Kapsam"], rows: profile.standards.slice(0, 5).map((s) => [s, `${title} kalite kriterleri`]) };
+  sections["sik_yapilan_hatalar"] = { title: "Sık Yapılan Hatalar", type: "list", items: [`${profile.properties[0]} değerinin yanlış ölçülmesi`, `${profile.processes[0]} adımında ${profile.standards[0]} dışına çıkılması`, `${profile.machines[0]} ayarlarının hatalı yapılması`, `${profile.materials[0]} seçiminde uygun olmayan kalitenin kullanılması`] };
+  sections["vaka_calismasi"] = { title: "Vaka Çalışması", type: "text", content: `Bir ${profile.applications[0]} firmasında ${title} uygulaması: Üretim hattında ${profile.machines[0]} kullanılarak ${profile.properties[0]} %${15 + Math.floor(rng() * 20)} artırılmıştır. Müşteri reddi oranı %${Math.floor(rng() * 5)}'e düşmüştür.` };
+  sections["ozet"] = { title: "Özet", type: "text", content: `${title}, ${moduleTitle} alanında ${profile.properties[0]} ve ${profile.standards[0]} çerçevesinde yürütülen kritik bir süreçtir.` };
+  sections["terimler_sozlugu"] = { title: "Terimler Sözlüğü", type: "glossary", items: Object.entries(profile.glossary).slice(0, 8).map(([term, def]) => ({ term, definition: def })) };
+  sections["ilgili_konular"] = { title: "İlgili Konular", type: "list", items: siblings.filter((s) => s.id !== node.id).slice(0, 5).map((s) => s.title) };
+  sections["referanslar"] = { title: "Referanslar", type: "list", items: profile.references };
+  sections["gorsel_sema"] = { title: "Görsel Şema", type: "diagram", prompt: `${title} sürecinin akış şeması: ${profile.processes.slice(0, 5).join(" → ")}`, caption: `${title} üretim akış şeması` };
 
   return sections;
 }
@@ -449,13 +290,7 @@ interface QuizQuestion {
   explanations: string[];
 }
 
-function buildQuiz(
-  node: any,
-  profile: DomainProfile,
-  children: any[],
-  siblings: any[],
-  rng: () => number
-): QuizQuestion[] {
+function buildQuiz(node: any, profile: DomainProfile, children: any[], siblings: any[], rng: () => number): QuizQuestion[] {
   const questions: QuizQuestion[] = [];
   const title = node.title;
   const desc = node.description || `${title} konusunun detaylı incelenmesi.`;
@@ -465,381 +300,132 @@ function buildQuiz(
     if (!q.question || !q.options || q.options.length < 2) return;
     const correctIdx = q.correct_index ?? 0;
     const opts = q.options!;
-    const exps = q.explanations || opts.map((o, i) => (i === correctIdx ? "Bu seçenek doğrudur." : "Bu seçenek yanlıştır."));
-    questions.push({
-      type: q.type!,
-      type_label: q.type_label!,
-      question: q.question!,
-      options: opts,
-      correct_index: correctIdx,
-      explanation: q.explanation || exps[correctIdx],
-      explanations: exps,
-    });
+    const exps = q.explanations || opts.map((o, i) => (i === correctIdx ? "Doğru." : "Yanlış."));
+    questions.push({ type: q.type!, type_label: q.type_label!, question: q.question!, options: opts, correct_index: correctIdx, explanation: q.explanation || exps[correctIdx], explanations: exps });
   }
 
-  // 1. Definition
-  const defOpts = shuffle(rng, [
-    desc,
-    `${distractors[0]}, bir üretim yöntemidir`,
-    `${distractors[1]}, bir analiz tekniğidir`,
-    `${distractors[2] || distractors[0]}, bir yönetim aracıdır`,
-  ]);
-  const defCorrectIdx = defOpts.findIndex((o) => o === desc);
-  addQuestion({
-    type: "definition",
-    type_label: "Tanım",
-    question: `"${title}" aşağıdakilerden hangisi ile en doğru şekilde tanımlanır?`,
-    options: defOpts,
-    correct_index: defCorrectIdx,
-    explanations: defOpts.map((o) => (o === desc ? `"${title}" tanımı: ${desc}` : `Bu tanım "${title}" için geçerli değildir; farklı bir kavrama aittir.`)),
-  });
+  const defOpts = shuffle(rng, [desc, `${distractors[0]}, bir üretim yöntemidir`, `${distractors[1]}, bir analiz tekniğidir`, `${distractors[2] || distractors[0]}, bir yönetim aracıdır`]);
+  addQuestion({ type: "definition", type_label: "Tanım", question: `"${title}" aşağıdakilerden hangisi ile tanımlanır?`, options: defOpts, correct_index: defOpts.findIndex((o) => o === desc), explanations: defOpts.map((o) => (o === desc ? `"${title}" tanımı: ${desc}` : `Bu tanım "${title}" için geçerli değildir.`)) });
 
-  // 2. Classification
   if (children.length >= 2) {
     const correctChild = children[0].title;
-    const wrongChildren = siblings.filter((s) => s.id !== node.id).slice(0, 3).map((s) => s.title);
-    while (wrongChildren.length < 3) wrongChildren.push(distractors[wrongChildren.length] || `Diğer kategori ${wrongChildren.length + 1}`);
-    const opts = shuffle(rng, [correctChild, ...wrongChildren]);
-    const correctIdx = opts.findIndex((o) => o === correctChild);
-    addQuestion({
-      type: "classification",
-      type_label: "Sınıflandırma",
-      question: `"${title}" kapsamında aşağıdaki alt konulardan hangisi yer alır?`,
-      options: opts,
-      correct_index: correctIdx,
-      explanations: opts.map((o) => (o === correctChild ? `"${correctChild}", "${title}" konusunun bir alt başlığıdır.` : `"${o}" "${title}" kapsamında yer almaz; farklı bir konuya aittir.`)),
-    });
+    const wrong = siblings.filter((s) => s.id !== node.id).slice(0, 3).map((s) => s.title);
+    while (wrong.length < 3) wrong.push(distractors[wrong.length] || `Kategori ${wrong.length + 1}`);
+    const opts = shuffle(rng, [correctChild, ...wrong]);
+    addQuestion({ type: "classification", type_label: "Sınıflandırma", question: `"${title}" kapsamında hangi alt konu yer alır?`, options: opts, correct_index: opts.findIndex((o) => o === correctChild), explanations: opts.map((o) => (o === correctChild ? `"${correctChild}" alt başlığıdır.` : `"${o}" bu kapsamda yer almaz.`)) });
   }
 
-  // 3. True/False (4 statements)
-  const true1 = `${title} sürecinde ${profile.properties[0]} parametresi kritik öneme sahiptir.`;
-  const true2 = `${title}, ${profile.standards[0]} standardı çerçevesinde değerlendirilir.`;
+  const true1 = `${title} sürecinde ${profile.properties[0]} kritiktir.`;
+  const true2 = `${title}, ${profile.standards[0]} çerçevesinde değerlendirilir.`;
   const false1 = `${title} sürecinde ${distractors[0]} kullanılır.`;
   const false2 = `${title}, ${distractors[1] || distractors[0]} ile aynı anlama gelir.`;
   const tfOpts = shuffle(rng, [true1, true2, false1, false2]);
-  const tfCorrectIdx = tfOpts.findIndex((o) => o === true1);
-  addQuestion({
-    type: "true_false",
-    type_label: "Doğru-Yanlış",
-    question: `"${title}" ile ilgili aşağıdaki ifadelerden hangisi doğrudur?`,
-    options: tfOpts,
-    correct_index: tfCorrectIdx,
-    explanations: tfOpts.map((o) => {
-      if (o === true1) return `Doğru: ${title} sürecinde ${profile.properties[0]} kritik bir parametredir.`;
-      if (o === true2) return `Doğru: ${title}, ${profile.standards[0]} standardına göre değerlendirilir.`;
-      if (o === false1) return `Yanlış: ${title} sürecinde ${distractors[0]} kullanılmaz.`;
-      return `Yanlış: ${title} ile ${distractors[1] || distractors[0]} aynı anlamda değildir.`;
-    }),
-  });
+  addQuestion({ type: "true_false", type_label: "Doğru-Yanlış", question: `"${title}" ile ilgili hangi ifade doğrudur?`, options: tfOpts, correct_index: tfOpts.findIndex((o) => o === true1), explanations: tfOpts.map((o) => { if (o === true1) return `Doğru: ${profile.properties[0]} kritiktir.`; if (o === true2) return `Doğru: ${profile.standards[0]} referans alınır.`; if (o === false1) return `Yanlış: ${distractors[0]} kullanılmaz.`; return `Yanlış.`; }) });
 
-  // 4. Comparison
   if (siblings.length >= 2) {
     const sib = siblings.find((s) => s.id !== node.id);
     if (sib) {
-      const correct = `${title} ile ${sib.title} farklı süreçleri ifade eder`;
-      const wrong1 = `${title} ve ${sib.title} aynı anlama gelir`;
-      const wrong2 = `${title}, ${sib.title}'nin bir alt basamağıdır`;
-      const wrong3 = `${sib.title}, ${title}'nin bir parçasıdır`;
-      const opts = shuffle(rng, [correct, wrong1, wrong2, wrong3]);
-      const correctIdx = opts.findIndex((o) => o === correct);
-      addQuestion({
-        type: "comparison",
-        type_label: "Karşılaştırma",
-        question: `"${title}" ve "${sib.title}" arasındaki ilişki için hangisi doğrudur?`,
-        options: opts,
-        correct_index: correctIdx,
-        explanations: opts.map((o) => (o === correct ? `${title} ve ${sib.title} aynı kapsamda farklı süreçlerdir.` : `Bu ifade yanlıştır: ${title} ve ${sib.title} farklı konulardır, eş anlamlı veya alt basamak değildir.`)),
-      });
+      const correct = `${title} ile ${sib.title} farklı süreçlerdir`;
+      const opts = shuffle(rng, [correct, `${title} ve ${sib.title} aynıdır`, `${title}, ${sib.title}'nin alt basamağıdır`, `${sib.title}, ${title}'nin parçasıdır`]);
+      addQuestion({ type: "comparison", type_label: "Karşılaştırma", question: `"${title}" ve "${sib.title}" arasındaki ilişki için hangisi doğrudur?`, options: opts, correct_index: opts.findIndex((o) => o === correct), explanations: opts.map((o) => (o === correct ? `Farklı süreçlerdir.` : `Yanlıştır.`)) });
     }
   }
 
-  // 5. Application
-  const correctApp = profile.applications[0];
-  const wrongApps = distractors.slice(0, 3);
-  const appOpts = shuffle(rng, [correctApp, ...wrongApps]);
-  const appCorrectIdx = appOpts.findIndex((o) => o === correctApp);
-  addQuestion({
-    type: "application",
-    type_label: "Uygulama",
-    question: `"${title}" aşağıdaki uygulama alanlarından hangisinde kullanılır?`,
-    options: appOpts,
-    correct_index: appCorrectIdx,
-    explanations: appOpts.map((o) => (o === correctApp ? `${correctApp}, ${title} uygulamasının kullanıldığı bir alandır.` : `${o}, ${title} uygulama alanı değildir; farklı bir disipline aittir.`)),
-  });
+  const appOpts = shuffle(rng, [profile.applications[0], ...distractors.slice(0, 3)]);
+  addQuestion({ type: "application", type_label: "Uygulama", question: `"${title}" hangi alanda kullanılır?`, options: appOpts, correct_index: appOpts.findIndex((o) => o === profile.applications[0]), explanations: appOpts.map((o) => (o === profile.applications[0] ? `${profile.applications[0]} kullanım alanıdır.` : `Kullanım alanı değildir.`)) });
 
-  // 6. Technical properties
-  const correctProp = profile.properties[0];
-  const wrongProps = distractors.slice(0, 3);
-  const propOpts = shuffle(rng, [correctProp, ...wrongProps]);
-  const propCorrectIdx = propOpts.findIndex((o) => o === correctProp);
-  addQuestion({
-    type: "technical_properties",
-    type_label: "Teknik Özellik",
-    question: `"${title}" için aşağıdaki teknik özellik ifadelerinden hangisi doğrudur?`,
-    options: propOpts,
-    correct_index: propCorrectIdx,
-    explanations: propOpts.map((o) => (o === correctProp ? `${correctProp}, ${title} kapsamında ölçülen temel bir teknik parametredir.` : `${o}, ${title} için bir teknik parametre değildir.`)),
-  });
+  const propOpts = shuffle(rng, [profile.properties[0], ...distractors.slice(0, 3)]);
+  addQuestion({ type: "technical_properties", type_label: "Teknik Özellik", question: `"${title}" için hangi teknik özellik doğrudur?`, options: propOpts, correct_index: propOpts.findIndex((o) => o === profile.properties[0]), explanations: propOpts.map((o) => (o === profile.properties[0] ? `${profile.properties[0]} temel parametredir.` : `Parametre değildir.`)) });
 
-  // 7. Manufacturing process
-  const correctProc = profile.processes[0];
-  const wrongProcs = distractors.slice(0, 3);
-  const procOpts = shuffle(rng, [correctProc, ...wrongProcs]);
-  const procCorrectIdx = procOpts.findIndex((o) => o === correctProc);
-  addQuestion({
-    type: "manufacturing_process",
-    type_label: "Üretim Süreci",
-    question: `"${title}" üretim sürecinde aşağıdaki adımlardan hangisi yer alır?`,
-    options: procOpts,
-    correct_index: procCorrectIdx,
-    explanations: procOpts.map((o) => (o === correctProc ? `${correctProc}, ${title} sürecinin temel adımlarındandır.` : `${o}, ${title} sürecinde yer almaz.`)),
-  });
+  const procOpts = shuffle(rng, [profile.processes[0], ...distractors.slice(0, 3)]);
+  addQuestion({ type: "manufacturing_process", type_label: "Üretim Süreci", question: `"${title}" sürecinde hangi adım yer alır?`, options: procOpts, correct_index: procOpts.findIndex((o) => o === profile.processes[0]), explanations: procOpts.map((o) => (o === profile.processes[0] ? `${profile.processes[0]} temel adımdır.` : `Yer almaz.`)) });
 
-  // 8. Advantages
-  const correctAdv = `${profile.properties[0]} bakımından yüksek performans`;
-  const wrongAdv = distractors.slice(0, 3);
-  const advOpts = shuffle(rng, [correctAdv, ...wrongAdv]);
-  const advCorrectIdx = advOpts.findIndex((o) => o === correctAdv);
-  addQuestion({
-    type: "advantages",
-    type_label: "Avantajlar",
-    question: `"${title}" aşağıdaki avantajlardan hangisini sağlar?`,
-    options: advOpts,
-    correct_index: advCorrectIdx,
-    explanations: advOpts.map((o) => (o === correctAdv ? `${title}, ${profile.properties[0]} açısından üstünlük sağlar.` : `${o}, ${title} avantajlarından biri değildir.`)),
-  });
+  const advOpts = shuffle(rng, [`${profile.properties[0]} bakımından yüksek performans`, ...distractors.slice(0, 3)]);
+  addQuestion({ type: "advantages", type_label: "Avantajlar", question: `"${title}" hangi avantajı sağlar?`, options: advOpts, correct_index: advOpts.findIndex((o) => o.startsWith(profile.properties[0])), explanations: advOpts.map((o) => (o.startsWith(profile.properties[0]) ? `${profile.properties[0]} üstünlüğü sağlar.` : `Avantaj değildir.`)) });
 
-  // 9. Disadvantages
-  const correctDis = `${profile.machines[0]} yatırım maliyeti`;
-  const wrongDis = distractors.slice(0, 3);
-  const disOpts = shuffle(rng, [correctDis, ...wrongDis]);
-  const disCorrectIdx = disOpts.findIndex((o) => o === correctDis);
-  addQuestion({
-    type: "disadvantages",
-    type_label: "Dezavantajlar",
-    question: `"${title}" ile ilgili aşağıdaki dezavantajlardan hangisi doğrudur?`,
-    options: disOpts,
-    correct_index: disCorrectIdx,
-    explanations: disOpts.map((o) => (o === correctDis ? `${profile.machines[0]} yatırım maliyeti, ${title} uygulamasının bir dezavantajıdır.` : `${o}, ${title} dezavantajlarından biri değildir.`)),
-  });
+  const disOpts = shuffle(rng, [`${profile.machines[0]} yatırım maliyeti`, ...distractors.slice(0, 3)]);
+  addQuestion({ type: "disadvantages", type_label: "Dezavantajlar", question: `"${title}" ile ilgili hangi dezavantaj doğrudur?`, options: disOpts, correct_index: disOpts.findIndex((o) => o.startsWith(profile.machines[0])), explanations: disOpts.map((o) => (o.startsWith(profile.machines[0]) ? `${profile.machines[0]} maliyetidir.` : `Dezavantaj değildir.`)) });
 
-  // 10. Case study
-  const correctCase = `${profile.applications[0]} sektöründe ${profile.properties[0]} iyileştirilmiştir`;
-  const wrongCases = distractors.slice(0, 3);
-  const caseOpts = shuffle(rng, [correctCase, ...wrongCases]);
-  const caseCorrectIdx = caseOpts.findIndex((o) => o === correctCase);
-  addQuestion({
-    type: "case_study",
-    type_label: "Vaka Çalışması",
-    question: `"${title}" uygulamasının sonuçlarından hangisi bir vaka çalışmasında beklenir?`,
-    options: caseOpts,
-    correct_index: caseCorrectIdx,
-    explanations: caseOpts.map((o) => (o === correctCase ? `${profile.applications[0]} alanında ${title} uygulaması ${profile.properties[0]} iyileştirmesi sağlar.` : `${o}, ${title} vaka sonuçlarından biri değildir.`)),
-  });
+  const caseOpts = shuffle(rng, [`${profile.applications[0]} sektöründe ${profile.properties[0]} iyileştirilmiştir`, ...distractors.slice(0, 3)]);
+  addQuestion({ type: "case_study", type_label: "Vaka Çalışması", question: `"${title}" uygulamasının sonucundan hangisi beklenir?`, options: caseOpts, correct_index: caseOpts.findIndex((o) => o.startsWith(profile.applications[0])), explanations: caseOpts.map((o) => (o.startsWith(profile.applications[0]) ? `${profile.applications[0]} alanında iyileştirme sağlar.` : `Beklenen sonuç değildir.`)) });
 
-  // Additional from children
   children.slice(0, 5).forEach((child) => {
     if (questions.length >= 15) return;
     const correct = child.title;
     const wrong = shuffle(rng, distractors).slice(0, 3);
     while (wrong.length < 3) wrong.push(distractors[wrong.length % distractors.length]);
     const opts = shuffle(rng, [correct, ...wrong]);
-    const correctIdx = opts.findIndex((o) => o === correct);
-    addQuestion({
-      type: "definition",
-      type_label: "Tanım",
-      question: `"${title}" kapsamında "${child.description || child.title}" ifadesi hangisini tanımlar?`,
-      options: opts,
-      correct_index: correctIdx,
-      explanations: opts.map((o) => (o === correct ? `${child.title}, ${title} konusunun bir alt başlığıdır.` : `${o}, ${title} alt başlığı değildir.`)),
-    });
+    addQuestion({ type: "definition", type_label: "Tanım", question: `"${title}" kapsamında "${child.description || child.title}" hangisini tanımlar?`, options: opts, correct_index: opts.findIndex((o) => o === correct), explanations: opts.map((o) => (o === correct ? `${child.title} alt başlığıdır.` : `Alt başlık değildir.`)) });
   });
 
-  // Extra: materials
   if (questions.length < 12 && profile.materials.length >= 4) {
-    const correctMat = profile.materials[0];
-    const wrongMats = profile.distractors.slice(0, 3);
-    const matOpts = shuffle(rng, [correctMat, ...wrongMats]);
-    const matCorrectIdx = matOpts.findIndex((o) => o === correctMat);
-    addQuestion({
-      type: "technical_properties",
-      type_label: "Teknik Özellik",
-      question: `"${title}" sürecinde aşağıdaki malzemelerden hangisi kullanılır?`,
-      options: matOpts,
-      correct_index: matCorrectIdx,
-      explanations: matOpts.map((o) => (o === correctMat ? `${correctMat}, ${title} sürecinde kullanılan temel bir malzemedir.` : `${o}, ${title} sürecinde kullanılan bir malzeme değildir.`)),
-    });
+    const opts = shuffle(rng, [profile.materials[0], ...profile.distractors.slice(0, 3)]);
+    addQuestion({ type: "technical_properties", type_label: "Teknik Özellik", question: `"${title}" sürecinde hangi malzeme kullanılır?`, options: opts, correct_index: opts.findIndex((o) => o === profile.materials[0]), explanations: opts.map((o) => (o === profile.materials[0] ? `${profile.materials[0]} temel malzemedir.` : `Malzeme değildir.`)) });
   }
 
-  // Extra: standards
-  if (questions.length < 13 && profile.standards.length >= 2) {
-    const correctStd = profile.standards[0];
-    const wrongStds = [...profile.distractors.slice(0, 3)];
-    while (wrongStds.length < 3) wrongStds.push(profile.distractors[wrongStds.length % profile.distractors.length]);
-    const stdOpts = shuffle(rng, [correctStd, ...wrongStds]);
-    const stdCorrectIdx = stdOpts.findIndex((o) => o === correctStd);
-    addQuestion({
-      type: "technical_properties",
-      type_label: "Teknik Özellik",
-      question: `"${title}" için hangi standart referans alınır?`,
-      options: stdOpts,
-      correct_index: stdCorrectIdx,
-      explanations: stdOpts.map((o) => (o === correctStd ? `${correctStd}, ${title} kapsamında referans alınan standarttır.` : `${o}, ${title} için referans standart değildir.`)),
-    });
-  }
-
-  // Extra: glossary
   if (questions.length < 14 && Object.keys(profile.glossary).length >= 2) {
-    const glossaryEntries = Object.entries(profile.glossary);
-    const [term, def] = glossaryEntries[0];
-    const wrongDefs = glossaryEntries.slice(1, 4).map(([t, d]) => d);
+    const entries = Object.entries(profile.glossary);
+    const [term, def] = entries[0];
+    const wrongDefs = entries.slice(1, 4).map(([t, d]) => d);
     while (wrongDefs.length < 3) wrongDefs.push(distractors[wrongDefs.length] || `Tanım ${wrongDefs.length + 1}`);
-    const glossOpts = shuffle(rng, [def, ...wrongDefs]);
-    const glossCorrectIdx = glossOpts.findIndex((o) => o === def);
-    addQuestion({
-      type: "definition",
-      type_label: "Tanım",
-      question: `"${term}" teriminin doğru tanımı hangisidir?`,
-      options: glossOpts,
-      correct_index: glossCorrectIdx,
-      explanations: glossOpts.map((o) => (o === def ? `"${term}" tanımı: ${def}` : `Bu tanım "${term}" için geçerli değildir.`)),
-    });
+    const opts = shuffle(rng, [def, ...wrongDefs]);
+    addQuestion({ type: "definition", type_label: "Tanım", question: `"${term}" teriminin doğru tanımı hangisidir?`, options: opts, correct_index: opts.findIndex((o) => o === def), explanations: opts.map((o) => (o === def ? `"${term}" tanımı: ${def}` : `Geçerli değildir.`)) });
   }
 
   return questions.slice(0, 15);
 }
 
-function buildFlashcards(
-  node: any,
-  profile: DomainProfile,
-  children: any[],
-  rng: () => number
-): any[] {
+function buildFlashcards(node: any, profile: DomainProfile, children: any[], rng: () => number): any[] {
   const cards: any[] = [];
   const title = node.title;
-
-  cards.push({ front: `${title} nedir?`, back: node.description || `${title}, ${profile.moduleSlug} alanının bir konusudur.` });
-
-  profile.keywords.slice(0, 6).forEach((k) => {
-    cards.push({ front: `${k} ne demektir?`, back: profile.glossary[k] || `${k}, ${profile.moduleSlug} alanında kullanılan bir terimdir.` });
-  });
-
-  profile.properties.slice(0, 5).forEach((p) => {
-    cards.push({ front: `${p} nasıl ölçülür?`, back: `${p}, ${profile.standards[0]} standardına uygun olarak ölçülür.` });
-  });
-
-  profile.processes.slice(0, 5).forEach((p) => {
-    cards.push({ front: `${p} adımının amacı nedir?`, back: `${p}, ${title} sürecinde kalite ve verimlilik sağlamak için uygulanır.` });
-  });
-
-  profile.standards.slice(0, 4).forEach((s) => {
-    cards.push({ front: `${s} standardı neyi kapsar?`, back: `${s}, ${title} kapsamında kalite kriterlerini tanımlar.` });
-  });
-
-  children.slice(0, 4).forEach((c) => {
-    cards.push({ front: `${c.title} nedir?`, back: c.description || `${c.title}, ${title} konusunun alt başlığıdır.` });
-  });
-
+  cards.push({ front: `${title} nedir?`, back: node.description || `${title}, ${profile.moduleSlug} konusudur.` });
+  profile.keywords.slice(0, 6).forEach((k) => cards.push({ front: `${k} ne demektir?`, back: profile.glossary[k] || `${k}, ${profile.moduleSlug} terimidir.` }));
+  profile.properties.slice(0, 5).forEach((p) => cards.push({ front: `${p} nasıl ölçülür?`, back: `${p}, ${profile.standards[0]} standardına göre ölçülür.` }));
+  profile.processes.slice(0, 5).forEach((p) => cards.push({ front: `${p} adımının amacı?`, back: `${p}, ${title} sürecinde kalite sağlar.` }));
+  profile.standards.slice(0, 4).forEach((s) => cards.push({ front: `${s} standardı neyi kapsar?`, back: `${s}, ${title} kalite kriterlerini tanımlar.` }));
+  children.slice(0, 4).forEach((c) => cards.push({ front: `${c.title} nedir?`, back: c.description || `${c.title}, ${title} alt başlığıdır.` }));
   return shuffle(rng, cards).slice(0, 24);
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
 
   try {
     const { slug, difficulty = "intermediate", force = false } = await req.json();
-
-    if (!slug) {
-      return new Response(JSON.stringify({ error: "slug gereklidir" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (!slug) return new Response(JSON.stringify({ error: "slug gereklidir" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    const nodeRes = await fetch(`${supabaseUrl}/rest/v1/content_nodes?slug=eq.${slug}&select=*`, {
-      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
-    });
+    const nodeRes = await fetch(`${supabaseUrl}/rest/v1/content_nodes?slug=eq.${slug}&select=*`, { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } });
     const nodeData = await nodeRes.json();
-    if (!nodeData || nodeData.length === 0) {
-      return new Response(JSON.stringify({ error: "Ders bulunamadı" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (!nodeData || nodeData.length === 0) return new Response(JSON.stringify({ error: "Ders bulunamadı" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const node = nodeData[0];
 
     if (!force) {
-      const cacheRes = await fetch(
-        `${supabaseUrl}/rest/v1/generated_content?node_slug=eq.${slug}&content_type=eq.full_lesson&difficulty=eq.${difficulty}&select=payload&order=created_at.desc&limit=1`,
-        { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
-      );
+      const cacheRes = await fetch(`${supabaseUrl}/rest/v1/generated_content?node_slug=eq.${slug}&content_type=eq.full_lesson&difficulty=eq.${difficulty}&select=payload&order=created_at.desc&limit=1`, { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } });
       const cacheData = await cacheRes.json();
-      if (cacheData && cacheData.length > 0) {
-        return new Response(
-          JSON.stringify({ cached: true, content: cacheData[0].payload }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      if (cacheData && cacheData.length > 0) return new Response(JSON.stringify({ cached: true, content: cacheData[0].payload }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const allRes = await fetch(`${supabaseUrl}/rest/v1/content_nodes?select=*&order=position.asc`, {
-      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
-    });
+    const allRes = await fetch(`${supabaseUrl}/rest/v1/content_nodes?select=*&order=position.asc`, { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } });
     const allNodes = await allRes.json();
-
     const children = allNodes.filter((n: any) => n.parent_id === node.id);
     const siblings = node.parent_id ? allNodes.filter((n: any) => n.parent_id === node.parent_id) : [];
     const moduleSlug = findModuleSlug(node, allNodes);
     const profile = getProfile(moduleSlug);
-
     const seed = slugToSeed(slug) + (difficulty === "beginner" ? 1 : difficulty === "advanced" ? 3 : 2);
     const rng = seededRandom(seed);
 
     const sections = buildSections(node, profile, children, siblings, rng);
     const quiz = buildQuiz(node, profile, children, siblings, rng);
     const flashcards = buildFlashcards(node, profile, children, rng);
+    const content = { node_slug: slug, node_title: node.title, difficulty, module: moduleSlug, sections, quiz, flashcards, generated_at: new Date().toISOString() };
 
-    const content = {
-      node_slug: slug,
-      node_title: node.title,
-      difficulty,
-      module: moduleSlug,
-      sections,
-      quiz,
-      flashcards,
-      generated_at: new Date().toISOString(),
-    };
+    await fetch(`${supabaseUrl}/rest/v1/generated_content`, { method: "POST", headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ node_slug: slug, node_id: node.id, content_type: "full_lesson", difficulty, payload: content }) });
 
-    await fetch(`${supabaseUrl}/rest/v1/generated_content`, {
-      method: "POST",
-      headers: {
-        apikey: serviceKey,
-        Authorization: `Bearer ${serviceKey}`,
-        "Content-Type": "application/json",
-        Prefer: "return=minimal",
-      },
-      body: JSON.stringify({
-        node_slug: slug,
-        node_id: node.id,
-        content_type: "full_lesson",
-        difficulty,
-        payload: content,
-      }),
-    });
-
-    return new Response(
-      JSON.stringify({ cached: false, content }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ cached: false, content }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: `İçerik üretim hatası: ${err.message}` }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: `Hata: ${err.message}` }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

@@ -50,7 +50,3 @@ export async function saveNote(slug: string, note: string): Promise<void> {
     await supabase.from("lesson_notes").insert({ node_slug: slug, note });
   }
 }
-
-export async function deleteNote(slug: string): Promise<void> {
-  await supabase.from("lesson_notes").delete().eq("node_slug", slug);
-}

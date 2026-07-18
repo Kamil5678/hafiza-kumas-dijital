@@ -74,15 +74,6 @@ export async function fetchSiblings(node: ContentNode): Promise<ContentNode[]> {
   return data as ContentNode[];
 }
 
-export async function countDescendants(nodeId: string): Promise<number> {
-  const { count, error } = await supabase
-    .from("content_nodes")
-    .select("*", { count: "exact", head: true })
-    .eq("parent_id", nodeId);
-  if (error) return 0;
-  return count || 0;
-}
-
 export async function fetchAllLessons(): Promise<ContentNode[]> {
   const { data, error } = await supabase
     .from("content_nodes")

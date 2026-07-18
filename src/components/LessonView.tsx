@@ -25,21 +25,15 @@ interface Props {
   onRegenerate: (slug: string) => Promise<void>;
 }
 
-type Tab =
-  | "content"
-  | "visuals"
-  | "quiz"
-  | "flashcards"
-  | "notes"
-  | "related";
+type Tab = "content" | "visuals" | "quiz" | "flashcards" | "notes" | "related";
 
 const TAB_LABELS: Record<Tab, string> = {
-  content: "Konu Anlatımı",
-  visuals: "Görseller",
+  content: "İçerik",
+  visuals: "Görsel",
   quiz: "Quiz",
-  flashcards: "Flash Kart",
+  flashcards: "Kartlar",
   notes: "Notlar",
-  related: "İlgili Konular",
+  related: "İlgili",
 };
 
 const SECTION_ORDER = [
@@ -90,7 +84,7 @@ export default function LessonView({
       const cached = await fetchCachedLesson(node.slug);
       if (!cached) {
         setError(
-          "Bu ders için içerik henüz üretilmemiş. Lütfen panele dönüp içerik üretimini başlatın."
+          "Bu ders için içerik henüz üretilmemiş. Panele dönüp içerik üretimini başlatın."
         );
         setLoading(false);
         return;
@@ -132,27 +126,25 @@ export default function LessonView({
 
   if (loading) {
     return (
-      <div className="lesson-loading">
-        <div className="spinner" />
-        <p>Ders yükleniyor...</p>
+      <div className="lv-loading">
+        <div className="lv-spinner" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="lesson-error">
-        <h3>İçerik Bulunamadı</h3>
-        <p>{error}</p>
-        <div className="error-actions">
+      <div className="lv-error">
+        <p className="lv-error-text">{error}</p>
+        <div className="lv-error-actions">
           <button
-            className="btn btn-primary"
+            className="lv-btn primary"
             onClick={handleRegenerate}
             disabled={regenerating}
           >
             {regenerating ? "Üretiliyor..." : "İçeriği Üret"}
           </button>
-          <button className="btn btn-secondary" onClick={onBackToDashboard}>
+          <button className="lv-btn ghost" onClick={onBackToDashboard}>
             Panele Dön
           </button>
         </div>
@@ -163,58 +155,52 @@ export default function LessonView({
   if (!content) return null;
 
   const currentIndex = siblings.findIndex((s) => s.id === node.id);
-  const prevLesson =
-    currentIndex > 0 ? siblings[currentIndex - 1] : null;
+  const prevLesson = currentIndex > 0 ? siblings[currentIndex - 1] : null;
   const nextLesson =
     currentIndex >= 0 && currentIndex < siblings.length - 1
       ? siblings[currentIndex + 1]
       : null;
 
   return (
-    <div className="lesson-view">
-      <div className="lesson-header">
-        <div className="lesson-header-info">
-          <span className="lesson-module-badge">
-            {content.module.replace(/-/g, " ")}
-          </span>
-          <h1 className="lesson-title">{content.node_title}</h1>
-          <span className="lesson-difficulty">{content.difficulty}</span>
+    <div className="lv">
+      <div className="lv-head">
+        <div className="lv-head-meta">
+          <span className="lv-module">{content.module.replace(/-/g, " ")}</span>
+          <h1 className="lv-title">{content.node_title}</h1>
         </div>
         <button
-          className="btn btn-ghost btn-sm"
+          className="lv-regen"
           onClick={handleRegenerate}
           disabled={regenerating}
           title="Yönetici: İçeriği yeniden üret"
         >
-          {regenerating ? "Üretiliyor..." : "↻ Yeniden Üret"}
+          {regenerating ? "···" : "↻"}
         </button>
       </div>
 
-      <div className="lesson-tabs">
+      <div className="lv-tabs">
         {(Object.keys(TAB_LABELS) as Tab[]).map((t) => (
           <button
             key={t}
-            className={`tab-btn ${tab === t ? "active" : ""}`}
+            className={`lv-tab ${tab === t ? "on" : ""}`}
             onClick={() => setTab(t)}
           >
             {TAB_LABELS[t]}
             {t === "quiz" && content.quiz.length > 0 && (
-              <span className="tab-badge">{content.quiz.length}</span>
+              <span className="lv-tab-ct">{content.quiz.length}</span>
             )}
             {t === "flashcards" && content.flashcards.length > 0 && (
-              <span className="tab-badge">{content.flashcards.length}</span>
+              <span className="lv-tab-ct">{content.flashcards.length}</span>
             )}
           </button>
         ))}
       </div>
 
-      <div className="lesson-tab-content">
+      <div className="lv-body">
         {tab === "content" && <ContentTab sections={content.sections} />}
         {tab === "visuals" && <VisualsTab sections={content.sections} />}
         {tab === "quiz" && <QuizTab quiz={content.quiz} />}
-        {tab === "flashcards" && (
-          <FlashcardsTab cards={content.flashcards} />
-        )}
+        {tab === "flashcards" && <FlashcardsTab cards={content.flashcards} />}
         {tab === "notes" && (
           <NotesTab
             note={note}
@@ -233,17 +219,17 @@ export default function LessonView({
         )}
       </div>
 
-      <div className="lesson-nav-footer">
-        <button className="btn btn-ghost" onClick={onBackToDashboard}>
-          ← Panele Dön
+      <div className="lv-foot">
+        <button className="lv-foot-btn" onClick={onBackToDashboard}>
+          ← Panel
         </button>
-        <button className="btn btn-ghost" onClick={onBackToModule}>
-          ↑ Modüle Dön
+        <button className="lv-foot-btn" onClick={onBackToModule}>
+          ↑ Modül
         </button>
-        <div className="nav-spacer" />
+        <div className="lv-foot-spacer" />
         {prevLesson && (
           <button
-            className="btn btn-ghost"
+            className="lv-foot-btn"
             onClick={() => onNavigate(prevLesson.slug)}
           >
             ← {prevLesson.title}
@@ -251,7 +237,7 @@ export default function LessonView({
         )}
         {nextLesson && (
           <button
-            className="btn btn-ghost"
+            className="lv-foot-btn"
             onClick={() => onNavigate(nextLesson.slug)}
           >
             {nextLesson.title} →
@@ -264,7 +250,7 @@ export default function LessonView({
 
 function ContentTab({ sections }: { sections: Record<string, any> }) {
   return (
-    <div className="content-tab">
+    <div className="ct">
       {SECTION_ORDER.map((key) => {
         const s = sections[key];
         if (!s) return null;
@@ -276,8 +262,8 @@ function ContentTab({ sections }: { sections: Record<string, any> }) {
 
 function SectionCard({ section }: { section: any }) {
   return (
-    <div className="section-card">
-      <h3 className="section-title">{section.title}</h3>
+    <div className="sc">
+      <h3 className="sc-title">{section.title}</h3>
       <SectionBody section={section} />
     </div>
   );
@@ -285,11 +271,11 @@ function SectionCard({ section }: { section: any }) {
 
 function SectionBody({ section }: { section: any }) {
   if (section.type === "text") {
-    return <p className="section-text">{section.content}</p>;
+    return <p className="sc-text">{section.content}</p>;
   }
   if (section.type === "list") {
     return (
-      <ul className="section-list">
+      <ul className="sc-list">
         {section.items.map((item: string, i: number) => (
           <li key={i}>{item}</li>
         ))}
@@ -298,8 +284,8 @@ function SectionBody({ section }: { section: any }) {
   }
   if (section.type === "table") {
     return (
-      <div className="table-wrap">
-        <table className="section-table">
+      <div className="sc-table-wrap">
+        <table className="sc-table">
           <thead>
             <tr>
               {section.headers.map((h: string, i: number) => (
@@ -322,9 +308,9 @@ function SectionBody({ section }: { section: any }) {
   }
   if (section.type === "glossary") {
     return (
-      <dl className="section-glossary">
+      <dl className="sc-glossary">
         {section.items.map((item: any, i: number) => (
-          <div key={i} className="glossary-item">
+          <div key={i} className="sc-glossary-item">
             <dt>{item.term}</dt>
             <dd>{item.definition}</dd>
           </div>
@@ -334,12 +320,12 @@ function SectionBody({ section }: { section: any }) {
   }
   if (section.type === "diagram") {
     return (
-      <div className="section-diagram">
-        <div className="diagram-placeholder">
-          <span className="diagram-icon">📐</span>
-          <p className="diagram-prompt">{section.prompt}</p>
+      <div className="sc-diagram">
+        <div className="sc-diagram-box">
+          <span className="sc-diagram-icon">▦</span>
+          <p className="sc-diagram-prompt">{section.prompt}</p>
         </div>
-        <p className="diagram-caption">{section.caption}</p>
+        <p className="sc-diagram-caption">{section.caption}</p>
       </div>
     );
   }
@@ -349,25 +335,17 @@ function SectionBody({ section }: { section: any }) {
 function VisualsTab({ sections }: { sections: Record<string, any> }) {
   const diagram = sections["gorsel_sema"];
   return (
-    <div className="visuals-tab">
+    <div className="vt">
       {diagram && (
-        <div className="visual-card">
+        <div className="vt-card">
           <h3>{diagram.title}</h3>
-          <div className="diagram-placeholder large">
-            <span className="diagram-icon">📐</span>
+          <div className="vt-diagram-box">
+            <span className="sc-diagram-icon">▦</span>
             <p>{diagram.prompt}</p>
           </div>
-          <p className="diagram-caption">{diagram.caption}</p>
+          <p className="sc-diagram-caption">{diagram.caption}</p>
         </div>
       )}
-      <div className="visual-info">
-        <h3>Görsel İçerik Notu</h3>
-        <p>
-          Bu dersin görsel şeması yukarıda gösterilmiştir. Üretim akış diyagramı,
-          teknik parametre tabloları ve süreç şemaları Konu Anlatımı sekmesinde
-          de bulunabilir.
-        </p>
-      </div>
     </div>
   );
 }
@@ -382,25 +360,25 @@ function QuizTab({ quiz }: { quiz: any[] }) {
   );
 
   if (quiz.length === 0) {
-    return <div className="quiz-empty">Bu ders için quiz bulunmamaktadır.</div>;
+    return <div className="qt-empty">Bu ders için quiz bulunmamaktadır.</div>;
   }
 
   return (
-    <div className="quiz-tab">
+    <div className="qt">
       {submitted && (
-        <div className="quiz-score-banner">
-          <h3>
-            Sonuç: {score} / {quiz.length}
-          </h3>
-          <p>
+        <div className="qt-result">
+          <span className="qt-result-score">
+            {score} / {quiz.length}
+          </span>
+          <span className="qt-result-msg">
             {score >= quiz.length * 0.7
-              ? "Tebrikler! Bu konuya hakimsiniz."
+              ? "Tebrikler!"
               : score >= quiz.length * 0.5
-              ? "İyi, ancak tekrar etmek faydalı olur."
-              : "Bu konuyu tekrar gözden geçirmeniz önerilir."}
-          </p>
+              ? "İyi, tekrar etmek faydalı olur."
+              : "Tekrar gözden geçirin."}
+          </span>
           <button
-            className="btn btn-primary"
+            className="lv-btn primary sm"
             onClick={() => {
               setAnswers({});
               setSubmitted(false);
@@ -411,56 +389,46 @@ function QuizTab({ quiz }: { quiz: any[] }) {
         </div>
       )}
       {quiz.map((q, qi) => (
-        <div key={qi} className="quiz-question-card">
-          <div className="quiz-question-header">
-            <span className="quiz-type-badge">{q.type_label}</span>
-            <span className="quiz-question-num">Soru {qi + 1}</span>
+        <div key={qi} className="qt-card">
+          <div className="qt-card-head">
+            <span className="qt-type">{q.type_label}</span>
+            <span className="qt-num">{qi + 1}</span>
           </div>
-          <p className="quiz-question-text">{q.question}</p>
-          <div className="quiz-options">
+          <p className="qt-q">{q.question}</p>
+          <div className="qt-opts">
             {q.options.map((opt: string, oi: number) => {
-              const isSelected = answers[qi] === oi;
-              const isCorrect = q.correct_index === oi;
-              const showResult = submitted && isSelected;
-              const showCorrect = submitted && isCorrect;
+              const sel = answers[qi] === oi;
+              const correct = q.correct_index === oi;
+              const showRes = submitted && sel;
+              const showCor = submitted && correct;
               return (
                 <button
                   key={oi}
-                  className={`quiz-option ${isSelected ? "selected" : ""} ${
-                    showResult ? (isCorrect ? "correct" : "incorrect") : ""
-                  } ${showCorrect ? "correct" : ""}`}
+                  className={`qt-opt ${sel ? "sel" : ""} ${
+                    showRes ? (correct ? "cor" : "inc") : ""
+                  } ${showCor ? "cor" : ""}`}
                   onClick={() =>
-                    !submitted &&
-                    setAnswers({ ...answers, [qi]: oi })
+                    !submitted && setAnswers({ ...answers, [qi]: oi })
                   }
                   disabled={submitted}
                 >
-                  <span className="quiz-option-text">{opt}</span>
-                  {showCorrect && <span className="quiz-mark">✓</span>}
-                  {showResult && !isCorrect && (
-                    <span className="quiz-mark">✗</span>
-                  )}
+                  <span>{opt}</span>
+                  {showCor && <span className="qt-mark">✓</span>}
+                  {showRes && !correct && <span className="qt-mark">✗</span>}
                 </button>
               );
             })}
           </div>
           {submitted && (
-            <div className="quiz-explanations">
-              <div className="quiz-main-explanation">
-                <strong>Açıklama: </strong>
-                {q.explanation}
-              </div>
-              <details className="quiz-detail-panel">
-                <summary>Seçenek açıklamalarını göster</summary>
+            <div className="qt-exp">
+              <p className="qt-exp-main">{q.explanation}</p>
+              <details className="qt-exp-detail">
+                <summary>Seçenek açıklamaları</summary>
                 <ul>
                   {q.options.map((opt: string, oi: number) => (
                     <li
                       key={oi}
-                      className={
-                        oi === q.correct_index
-                          ? "exp-correct"
-                          : "exp-incorrect"
-                      }
+                      className={oi === q.correct_index ? "ok" : "no"}
                     >
                       <strong>{opt}: </strong>
                       {q.explanations[oi]}
@@ -474,7 +442,7 @@ function QuizTab({ quiz }: { quiz: any[] }) {
       ))}
       {!submitted && (
         <button
-          className="btn btn-primary btn-block"
+          className="lv-btn primary block"
           onClick={() => setSubmitted(true)}
         >
           Cevapları Gönder
@@ -487,15 +455,15 @@ function QuizTab({ quiz }: { quiz: any[] }) {
 function FlashcardsTab({ cards }: { cards: any[] }) {
   const [flipped, setFlipped] = useState<Set<number>>(new Set());
   if (cards.length === 0)
-    return <div className="flashcards-empty">Flash kart bulunmamaktadır.</div>;
+    return <div className="qt-empty">Flash kart bulunmamaktadır.</div>;
   return (
-    <div className="flashcards-tab">
-      <p className="flashcards-hint">Kartlara tıklayarak çevirin.</p>
-      <div className="flashcards-grid">
+    <div className="ft">
+      <p className="ft-hint">Kartlara tıklayarak çevirin</p>
+      <div className="ft-grid">
         {cards.map((card, i) => (
           <div
             key={i}
-            className={`flashcard ${flipped.has(i) ? "flipped" : ""}`}
+            className={`ft-card ${flipped.has(i) ? "flipped" : ""}`}
             onClick={() => {
               const next = new Set(flipped);
               if (next.has(i)) next.delete(i);
@@ -503,13 +471,13 @@ function FlashcardsTab({ cards }: { cards: any[] }) {
               setFlipped(next);
             }}
           >
-            <div className="flashcard-inner">
-              <div className="flashcard-front">
-                <span className="flashcard-label">Soru</span>
+            <div className="ft-card-inner">
+              <div className="ft-card-front">
+                <span className="ft-card-label">S</span>
                 <p>{card.front}</p>
               </div>
-              <div className="flashcard-back">
-                <span className="flashcard-label">Cevap</span>
+              <div className="ft-card-back">
+                <span className="ft-card-label">C</span>
                 <p>{card.back}</p>
               </div>
             </div>
@@ -532,24 +500,20 @@ function NotesTab({
   saved: boolean;
 }) {
   return (
-    <div className="notes-tab">
-      <h3>Ders Notlarım</h3>
-      <p className="notes-hint">
-        Bu derse ait kişisel notlarınızı buraya kaydedebilirsiniz. Notlar
-        otomatik olarak veritabanında saklanır.
-      </p>
+    <div className="nt">
+      <h3 className="nt-title">Ders Notlarım</h3>
       <textarea
-        className="notes-textarea"
+        className="nt-area"
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder="Notlarınızı buraya yazın..."
-        rows={12}
+        rows={10}
       />
-      <div className="notes-actions">
-        <button className="btn btn-primary" onClick={onSave}>
+      <div className="nt-actions">
+        <button className="lv-btn primary sm" onClick={onSave}>
           Kaydet
         </button>
-        {saved && <span className="notes-saved">Kaydedildi ✓</span>}
+        {saved && <span className="nt-saved">Kaydedildi ✓</span>}
       </div>
     </div>
   );
@@ -574,25 +538,25 @@ function RelatedTab({
   );
 
   return (
-    <div className="related-tab">
-      <h3>İlgili Konular</h3>
+    <div className="rt">
+      <h3 className="rt-title">İlgili Konular</h3>
       {sibLessons.length === 0 && extraTitles.length === 0 ? (
-        <p>Bu derste ilgili konu bulunmamaktadır.</p>
+        <p className="rt-empty">İlgili konu bulunmamaktadır.</p>
       ) : (
-        <div className="related-list">
+        <div className="rt-list">
           {sibLessons.map((s) => (
             <button
               key={s.id}
-              className="related-card"
+              className="rt-item"
               onClick={() => onNavigate(s.slug)}
             >
-              <span className="related-title">{s.title}</span>
-              <span className="related-arrow">→</span>
+              <span>{s.title}</span>
+              <span className="rt-arrow">→</span>
             </button>
           ))}
           {extraTitles.map((t: string, i: number) => (
-            <div key={i} className="related-card static">
-              <span className="related-title">{t}</span>
+            <div key={i} className="rt-item static">
+              <span>{t}</span>
             </div>
           ))}
         </div>

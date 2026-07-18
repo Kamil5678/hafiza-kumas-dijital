@@ -1,29 +1,45 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  fetchRoots,
-  fetchChildren,
-  fetchNode,
-  fetchPath,
-  fetchAllLessons,
-  fetchCachedSlugs,
-  type ContentNode,
+  fetchRoots, fetchChildren, fetchNode, fetchPath,
+  fetchAllLessons, fetchCachedSlugs, type ContentNode,
 } from "./lib/supabase";
 import { generateLesson } from "./lib/lesson";
 import LessonView from "./components/LessonView";
 
-type View =
-  | { name: "dashboard" }
-  | { name: "module"; slug: string }
-  | { name: "lesson"; slug: string };
+type View = { name: "dashboard" } | { name: "module"; slug: string } | { name: "lesson"; slug: string };
 
 interface GenStatus {
-  total: number;
-  cached: number;
-  remaining: number;
-  generating: boolean;
-  currentTitle: string | null;
-  progress: number;
-  errors: string[];
+  total: number; cached: number; remaining: number; generating: boolean;
+  currentTitle: string | null; progress: number; errors: string[];
+}
+
+/* ── Elisé cherry-bra SVG logo ── */
+function EliseLogo({ size = 32 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-label="Elisé"
+    >
+      {/* stems */}
+      <path d="M50 28 C50 16, 62 8, 68 4" stroke="#EDE8E4" strokeWidth="4" strokeLinecap="round" fill="none" />
+      <path d="M50 28 C50 16, 38 8, 32 4" stroke="#EDE8E4" strokeWidth="4" strokeLinecap="round" fill="none" />
+      {/* leaf */}
+      <ellipse cx="68" cy="4" rx="7" ry="4" fill="#EDE8E4" transform="rotate(-20 68 4)" />
+      {/* left cherry body */}
+      <path d="M50 30 C42 30, 18 32, 18 54 C18 70, 30 78, 42 76 C50 74, 50 64, 50 60 Z" fill="#6B1020" />
+      {/* right cherry body */}
+      <path d="M50 30 C58 30, 82 32, 82 54 C82 70, 70 78, 58 76 C50 74, 50 64, 50 60 Z" fill="#6B1020" />
+      {/* outline / highlight between cherries */}
+      <path d="M50 30 C50 30, 50 44, 50 60" stroke="#EDE8E4" strokeWidth="3" strokeLinecap="round" />
+      {/* outer rim highlight */}
+      <path d="M50 30 C42 30, 18 32, 18 54 C18 70, 30 78, 42 76 C50 74, 50 64, 50 60" stroke="#EDE8E4" strokeWidth="2.5" fill="none" opacity="0.6" />
+      <path d="M50 30 C58 30, 82 32, 82 54 C82 70, 70 78, 58 76 C50 74, 50 64, 50 60" stroke="#EDE8E4" strokeWidth="2.5" fill="none" opacity="0.6" />
+    </svg>
+  );
 }
 
 export default function App() {
@@ -33,42 +49,24 @@ export default function App() {
   const [lessonNode, setLessonNode] = useState<ContentNode | null>(null);
   const [path, setPath] = useState<ContentNode[]>([]);
   const [genStatus, setGenStatus] = useState<GenStatus>({
-    total: 0,
-    cached: 0,
-    remaining: 0,
-    generating: false,
-    currentTitle: null,
-    progress: 0,
-    errors: [],
+    total: 0, cached: 0, remaining: 0, generating: false, currentTitle: null, progress: 0, errors: [],
   });
   const [allLessons, setAllLessons] = useState<ContentNode[]>([]);
   const [genExpanded, setGenExpanded] = useState(false);
   const genAbortRef = useRef(false);
 
   useEffect(() => {
-    (async () => {
-      const r = await fetchRoots();
-      setRoots(r);
-      await refreshGenStatus();
-    })();
+    (async () => { setRoots(await fetchRoots()); await refreshGenStatus(); })();
   }, []);
 
   const refreshGenStatus = async () => {
-    const [lessons, cachedSlugs] = await Promise.all([
-      fetchAllLessons(),
-      fetchCachedSlugs(),
-    ]);
+    const [lessons, cachedSlugs] = await Promise.all([fetchAllLessons(), fetchCachedSlugs()]);
     setAllLessons(lessons);
     const cachedCount = lessons.filter((l) => cachedSlugs.has(l.slug)).length;
     setGenStatus((prev) => ({
-      ...prev,
-      total: lessons.length,
-      cached: cachedCount,
+      ...prev, total: lessons.length, cached: cachedCount,
       remaining: lessons.length - cachedCount,
-      progress:
-        lessons.length > 0
-          ? Math.round((cachedCount / lessons.length) * 100)
-          : 0,
+      progress: lessons.length > 0 ? Math.round((cachedCount / lessons.length) * 100) : 0,
     }));
   };
 
@@ -76,30 +74,20 @@ export default function App() {
     if (genStatus.generating) return;
     genAbortRef.current = false;
     setGenStatus((prev) => ({ ...prev, generating: true, errors: [] }));
-
     const cachedSlugs = await fetchCachedSlugs();
     const toGenerate = allLessons.filter((l) => !cachedSlugs.has(l.slug));
     let completed = genStatus.cached;
     const errors: string[] = [];
-
     for (const lesson of toGenerate) {
       if (genAbortRef.current) break;
       setGenStatus((prev) => ({ ...prev, currentTitle: lesson.title }));
-      try {
-        await generateLesson(lesson.slug, "intermediate", false);
-        completed++;
-      } catch (e: any) {
-        errors.push(`${lesson.title}: ${e.message}`);
-      }
+      try { await generateLesson(lesson.slug, "intermediate", false); completed++; }
+      catch (e: any) { errors.push(`${lesson.title}: ${e.message}`); }
       setGenStatus((prev) => ({
-        ...prev,
-        cached: completed,
-        remaining: prev.total - completed,
-        progress: Math.round((completed / prev.total) * 100),
-        errors,
+        ...prev, cached: completed, remaining: prev.total - completed,
+        progress: Math.round((completed / prev.total) * 100), errors,
       }));
     }
-
     setGenStatus((prev) => ({ ...prev, generating: false, currentTitle: null }));
     await refreshGenStatus();
   };
@@ -110,10 +98,8 @@ export default function App() {
   const openModule = async (slug: string) => {
     const node = await fetchNode(slug);
     if (!node) return;
-    const children = await fetchChildren(node.id);
-    setModuleChildren(children);
-    const p = await fetchPath(slug);
-    setPath(p);
+    setModuleChildren(await fetchChildren(node.id));
+    setPath(await fetchPath(slug));
     setView({ name: "module", slug });
   };
 
@@ -121,18 +107,12 @@ export default function App() {
     const node = await fetchNode(slug);
     if (!node) return;
     setLessonNode(node);
-    const p = await fetchPath(slug);
-    setPath(p);
+    setPath(await fetchPath(slug));
     setView({ name: "lesson", slug });
   };
 
-  const backToModule = () => {
-    if (path.length >= 2) openModule(path[0].slug);
-    else setView({ name: "dashboard" });
-  };
-
+  const backToModule = () => path.length >= 2 ? openModule(path[0].slug) : setView({ name: "dashboard" });
   const backToDashboard = () => setView({ name: "dashboard" });
-
   const allGenerated = genStatus.remaining === 0 && genStatus.total > 0;
 
   return (
@@ -140,22 +120,17 @@ export default function App() {
       <header className="topbar">
         <div className="topbar-inner">
           <button className="brand" onClick={backToDashboard}>
-            <span className="brand-mark">🍒</span>
-            <span className="brand-text">Vişne Fashion OS</span>
+            <EliseLogo size={30} />
+            <span className="brand-text">Elisé</span>
+            <span className="brand-sub">Fashion OS</span>
           </button>
           {view.name !== "dashboard" && path.length > 0 && (
             <nav className="crumbs">
               {path.map((n, i) => (
                 <span key={n.id} className="crumb">
                   {i > 0 && <span className="crumb-sep">·</span>}
-                  <button
-                    className="crumb-link"
-                    onClick={() => {
-                      if (i === 0) openModule(n.slug);
-                      else if (n.type === "lesson") openLesson(n.slug);
-                      else openModule(path[0].slug);
-                    }}
-                  >
+                  <button className="crumb-link"
+                    onClick={() => { if (i === 0) openModule(n.slug); else if (n.type === "lesson") openLesson(n.slug); else openModule(path[0].slug); }}>
                     {n.title}
                   </button>
                 </span>
@@ -169,10 +144,9 @@ export default function App() {
         {view.name === "dashboard" && (
           <div className="dashboard">
             <div className="hero">
-              <h1 className="hero-title">Fashion Operating System</h1>
-              <p className="hero-sub">
-                Tekstil ve moda sektörü için merkezi içerik platformu
-              </p>
+              <div className="hero-logo"><EliseLogo size={64} /></div>
+              <h1 className="hero-title">Elisé Fashion OS</h1>
+              <p className="hero-sub">Tekstil ve moda sektörü için merkezi içerik platformu</p>
             </div>
             <section className="modules">
               <h2 className="modules-label">Modüller</h2>
@@ -203,13 +177,7 @@ export default function App() {
         )}
 
         {view.name === "lesson" && lessonNode && (
-          <LessonView
-            node={lessonNode}
-            onNavigate={openLesson}
-            onBackToModule={backToModule}
-            onBackToDashboard={backToDashboard}
-            onRegenerate={handleRegenerate}
-          />
+          <LessonView node={lessonNode} onNavigate={openLesson} onBackToModule={backToModule} onBackToDashboard={backToDashboard} onRegenerate={handleRegenerate} />
         )}
       </main>
 
@@ -217,28 +185,16 @@ export default function App() {
         <button className="gen-bar-toggle" onClick={() => setGenExpanded(!genExpanded)}>
           <div className="gen-bar-info">
             {genStatus.generating ? (
-              <>
-                <span className="gen-dot pulse" />
-                <span className="gen-bar-text">Üretiliyor: <strong>{genStatus.currentTitle}</strong></span>
-                <span className="gen-bar-count">{genStatus.remaining} kaldı</span>
-              </>
+              <><span className="gen-dot pulse" /><span className="gen-bar-text">Üretiliyor: <strong>{genStatus.currentTitle}</strong></span><span className="gen-bar-count">{genStatus.remaining} kaldı</span></>
             ) : allGenerated ? (
-              <>
-                <span className="gen-dot done" />
-                <span className="gen-bar-text">Tüm içerik hazır</span>
-              </>
+              <><span className="gen-dot done" /><span className="gen-bar-text">Tüm içerik hazır</span></>
             ) : (
-              <>
-                <span className="gen-dot" />
-                <span className="gen-bar-text">{genStatus.cached} / {genStatus.total} ders hazır</span>
-              </>
+              <><span className="gen-dot" /><span className="gen-bar-text">{genStatus.cached} / {genStatus.total} ders hazır</span></>
             )}
           </div>
           <span className="gen-bar-pct">{genStatus.progress}%</span>
         </button>
-        <div className="gen-bar-track">
-          <div className="gen-bar-fill" style={{ width: `${genStatus.progress}%` }} />
-        </div>
+        <div className="gen-bar-track"><div className="gen-bar-fill" style={{ width: `${genStatus.progress}%` }} /></div>
         {genExpanded && (
           <div className="gen-bar-detail">
             {genStatus.errors.length > 0 && (
@@ -253,12 +209,8 @@ export default function App() {
                   {genStatus.cached > 0 ? `Üretmeye Devam Et (${genStatus.remaining})` : `Tüm İçeriği Üret (${genStatus.total})`}
                 </button>
               )}
-              {genStatus.generating && (
-                <button className="gen-btn stop" onClick={handleStopGeneration}>Durdur</button>
-              )}
-              {allGenerated && !genStatus.generating && (
-                <span className="gen-bar-done-msg">Dersler açıldığında anında yüklenecektir.</span>
-              )}
+              {genStatus.generating && <button className="gen-btn stop" onClick={handleStopGeneration}>Durdur</button>}
+              {allGenerated && !genStatus.generating && <span className="gen-bar-done-msg">Dersler açıldığında anında yüklenecektir.</span>}
             </div>
           </div>
         )}
@@ -267,25 +219,20 @@ export default function App() {
   );
 }
 
-function NodeTree({ nodes, level, onOpenLesson }: { nodes: ContentNode[]; level: number; onOpenLesson: (slug: string) => void; }) {
+function NodeTree({ nodes, level, onOpenLesson }: { nodes: ContentNode[]; level: number; onOpenLesson: (slug: string) => void }) {
   return (
     <div className={`tree level-${level}`}>
-      {nodes.map((node) => (
-        <NodeTreeItem key={node.id} node={node} level={level} onOpenLesson={onOpenLesson} />
-      ))}
+      {nodes.map((node) => <NodeTreeItem key={node.id} node={node} level={level} onOpenLesson={onOpenLesson} />)}
     </div>
   );
 }
 
-function NodeTreeItem({ node, level, onOpenLesson }: { node: ContentNode; level: number; onOpenLesson: (slug: string) => void; }) {
+function NodeTreeItem({ node, level, onOpenLesson }: { node: ContentNode; level: number; onOpenLesson: (slug: string) => void }) {
   const [children, setChildren] = useState<ContentNode[]>([]);
   const [expanded, setExpanded] = useState(false);
 
   const toggle = async () => {
-    if (!expanded && children.length === 0 && node.type !== "lesson") {
-      const c = await fetchChildren(node.id);
-      setChildren(c);
-    }
+    if (!expanded && children.length === 0 && node.type !== "lesson") setChildren(await fetchChildren(node.id));
     setExpanded(!expanded);
   };
 
@@ -305,23 +252,16 @@ function NodeTreeItem({ node, level, onOpenLesson }: { node: ContentNode; level:
         <span className="tree-tag">{node.type}</span>
         <span className="tree-text">{node.title}</span>
       </button>
-      {expanded && children.length > 0 && (
-        <NodeTree nodes={children} level={level + 1} onOpenLesson={onOpenLesson} />
-      )}
+      {expanded && children.length > 0 && <NodeTree nodes={children} level={level + 1} onOpenLesson={onOpenLesson} />}
     </div>
   );
 }
 
 function moduleIcon(slug: string): string {
   const icons: Record<string, string> = {
-    "tekstil-bilgileri": "01",
-    "moda-bilgileri": "02",
-    "ic-giyim": "03",
-    surdurulebilirlik: "04",
-    strateji: "05",
-    istatistik: "06",
-    "elise-studio": "07",
-    "bilgi-bankasi": "08",
+    "tekstil-bilgileri": "01", "moda-bilgileri": "02", "ic-giyim": "03",
+    surdurulebilirlik: "04", strateji: "05", istatistik: "06",
+    "elise-studio": "07", "bilgi-bankasi": "08",
   };
   return icons[slug] || "·";
 }

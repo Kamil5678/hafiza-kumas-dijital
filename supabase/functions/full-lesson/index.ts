@@ -10,13 +10,11 @@ function seededRandom(seed: number) {
   let s = seed;
   return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
 }
-
 function slugToSeed(slug: string): number {
   let h = 0;
   for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) % 233280;
   return h + 1;
 }
-
 function shuffle<T>(rng: () => number, arr: T[]): T[] {
   const r = [...arr];
   for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; }
@@ -24,17 +22,9 @@ function shuffle<T>(rng: () => number, arr: T[]): T[] {
 }
 
 interface DomainProfile {
-  moduleSlug: string;
-  keywords: string[];
-  machines: string[];
-  materials: string[];
-  standards: string[];
-  processes: string[];
-  applications: string[];
-  properties: string[];
-  references: string[];
-  glossary: Record<string, string>;
-  imageQueries: string[];
+  moduleSlug: string; keywords: string[]; machines: string[]; materials: string[];
+  standards: string[]; processes: string[]; applications: string[]; properties: string[];
+  references: string[]; glossary: Record<string, string>; imageQueries: string[];
 }
 
 const PROFILES: Record<string, DomainProfile> = {
@@ -246,7 +236,7 @@ async function fetchImages(queries: string[], rng: () => number, count: number):
     try {
       const res = await fetch(
         `https://commons.wikimedia.org/w/api.php?action=query&format=json&prop=imageinfo&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrnamespace=6&gsrlimit=3&iiprop=url&iiurlwidth=800`,
-        { headers: { "User-Agent": "VisneFashionOS/1.0" } }
+        { headers: { "User-Agent": "EliseFashionOS/1.0" } }
       );
       if (!res.ok) continue;
       const data = await res.json();
@@ -379,11 +369,9 @@ function buildQuiz(node: any, profile: DomainProfile, children: any[], siblings:
     questions.push({ type: q.type!, type_label: q.type_label!, question: q.question!, options: opts, correct_index: correctIdx, explanation: q.explanation || exps[correctIdx], explanations: exps });
   }
 
-  // 1. Definition
   const defOpts = shuffle(rng, [desc, ...sameModuleDistractors.wrongDefs]);
   addQuestion({ type: "definition", type_label: "Tanım", question: `"${title}" aşağıdakilerden hangisi ile en doğru şekilde tanımlanır?`, options: defOpts, correct_index: defOpts.findIndex((o) => o === desc), explanations: defOpts.map((o) => (o === desc ? `Doğru: "${title}" tanımı budur. ${desc}` : `Yanlış: ${title} bir ${o.includes("kalite kontrol") ? "kalite kontrol yöntemi" : o.includes("optimizasyon") ? "optimizasyon tekniği" : "standart"} değildir; ${title} ${profile.moduleSlug.replace(/-/g, " ")} alanının bir konusudur.`)) });
 
-  // 2. Classification
   if (children.length >= 2 || sameModuleDistractors.wrongChildren.length >= 2) {
     const correctChild = children.length > 0 ? children[0].title : `${title} alt başlığı`;
     const wrongChildren = sameModuleDistractors.wrongChildren.length >= 3 ? sameModuleDistractors.wrongChildren : [...sameModuleDistractors.wrongChildren, ...sameModuleDistractors.wrongDefs.slice(0, 3 - sameModuleDistractors.wrongChildren.length)];
@@ -391,7 +379,6 @@ function buildQuiz(node: any, profile: DomainProfile, children: any[], siblings:
     addQuestion({ type: "classification", type_label: "Sınıflandırma", question: `"${title}" kapsamında aşağıdaki alt konulardan hangisi yer alır?`, options: opts, correct_index: opts.findIndex((o) => o === correctChild), explanations: opts.map((o) => (o === correctChild ? `Doğru: "${correctChild}", "${title}" konusunun bir alt başlığıdır.` : `Yanlış: "${o}" "${title}" kapsamında yer almaz; aynı modülün farklı bir konusudur.`)) });
   }
 
-  // 3. True/False
   const true1 = `${title} sürecinde **${p[0]}** parametresi kritik öneme sahiptir.`;
   const true2 = `${title}, **${s[0]}** standardı çerçevesinde değerlendirilir.`;
   const false1 = `${title} sürecinde ${k[0]} yerine ${k[1] || k[0]} kullanılır.`;
@@ -399,7 +386,6 @@ function buildQuiz(node: any, profile: DomainProfile, children: any[], siblings:
   const tfOpts = shuffle(rng, [true1, true2, false1, false2]);
   addQuestion({ type: "true_false", type_label: "Doğru-Yanlış", question: `"${title}" ile ilgili aşağıdaki ifadelerden hangisi doğrudur?`, options: tfOpts, correct_index: tfOpts.findIndex((o) => o === true1), explanations: tfOpts.map((o) => { if (o === true1) return `Doğru: ${title} sürecinde ${p[0]} kritik bir parametredir ve sürekli ölçülür.`; if (o === true2) return `Doğru: ${title}, ${s[0]} standardına göre değerlendirilir, ancak soruda tek doğru cevap aranmaktadır.`; if (o === false1) return `Yanlış: ${title} sürecinde ${k[0]} temel bileşendir; ${k[1] || k[0]} alternatif değildir.`; return `Yanlış: ${title}, ${proc[0]} adımını içerir; bu adım sürecin temel basamaklarındandır.`; }) });
 
-  // 4. Comparison
   if (sameModuleDistractors.wrongChildren.length >= 1) {
     const sib = sameModuleDistractors.wrongChildren[0];
     const correct = `${title} ile ${sib} aynı modülün farklı konularıdır`;
@@ -407,31 +393,24 @@ function buildQuiz(node: any, profile: DomainProfile, children: any[], siblings:
     addQuestion({ type: "comparison", type_label: "Karşılaştırma", question: `"${title}" ve "${sib}" arasındaki ilişki için hangisi doğrudur?`, options: opts, correct_index: opts.findIndex((o) => o === correct), explanations: opts.map((o) => (o === correct ? `Doğru: ${title} ve ${sib} aynı modülün farklı konularıdır; birbirinden bağımsızdır.` : `Yanlış: ${title} ve ${sib} eş anlamlı veya alt basamak değildir; aynı modülün paralel konularıdır.`)) });
   }
 
-  // 5. Application
   const appOpts = shuffle(rng, [app[0], ...sameModuleDistractors.wrongApps]);
   addQuestion({ type: "application", type_label: "Uygulama", question: `"${title}" aşağıdaki uygulama alanlarından hangisinde kullanılır?`, options: appOpts, correct_index: appOpts.findIndex((o) => o === app[0]), explanations: appOpts.map((o) => (o === app[0] ? `Doğru: ${app[0]}, ${title} uygulamasının birincil kullanım alanıdır.` : `Yanlış: ${o}, ${title} için birincil uygulama alanı değildir; aynı modülün farklı bir uygulamasıdır.`)) });
 
-  // 6. Technical properties
   const propOpts = shuffle(rng, [p[0], ...sameModuleDistractors.wrongProps]);
   addQuestion({ type: "technical_properties", type_label: "Teknik Özellik", question: `"${title}" için aşağıdaki teknik özellik ifadelerinden hangisi doğrudur?`, options: propOpts, correct_index: propOpts.findIndex((o) => o === p[0]), explanations: propOpts.map((o) => (o === p[0] ? `Doğru: ${p[0]}, ${title} kapsamında ölçülen temel bir teknik parametredir.` : `Yanlış: ${o}, ${title} için birincil teknik parametre değildir; aynı modülün farklı bir parametresidir.`)) });
 
-  // 7. Manufacturing process
   const procOpts = shuffle(rng, [proc[0], ...sameModuleDistractors.wrongProcs]);
   addQuestion({ type: "manufacturing_process", type_label: "Üretim Süreci", question: `"${title}" üretim sürecinde aşağıdaki adımlardan hangisi yer alır?`, options: procOpts, correct_index: procOpts.findIndex((o) => o === proc[0]), explanations: procOpts.map((o) => (o === proc[0] ? `Doğru: ${proc[0]}, ${title} sürecinin temel adımlarındandır.` : `Yanlış: ${o}, ${title} sürecinde yer almaz; aynı modülün farklı bir sürecidir.`)) });
 
-  // 8. Advantages
   const advOpts = shuffle(rng, [`**${p[0]}** bakımından yüksek performans`, `**${s[0]}** uyumu ile güvenilirlik`, `**${proc[0]}** verimliliği`, `**${app[0]}** alanında geniş kullanım`]);
   addQuestion({ type: "advantages", type_label: "Avantajlar", question: `"${title}" aşağıdaki avantajlardan hangisini sağlar?`, options: advOpts, correct_index: advOpts.findIndex((o) => o.startsWith(p[0])), explanations: advOpts.map((o) => (o.startsWith(p[0]) ? `Doğru: ${title}, ${p[0]} açısından üstünlük sağlar ve ürün kalitesini artırır.` : `Yanlış: ${o}, ${title} avantajlarından biri değildir; bu aynı modülün farklı bir özelliğidir.`)) });
 
-  // 9. Disadvantages
   const disOpts = shuffle(rng, [`**${m[0]}** yatırım maliyeti`, `**${proc[0]}** adımında uzmanlık gereksinimi`, `**${p[0]}** dalgalanma riski`, `**${s[0]}** uyum maliyeti`]);
   addQuestion({ type: "disadvantages", type_label: "Dezavantajlar", question: `"${title}" ile ilgili aşağıdaki dezavantajlardan hangisi doğrudur?`, options: disOpts, correct_index: disOpts.findIndex((o) => o.startsWith(m[0])), explanations: disOpts.map((o) => (o.startsWith(m[0]) ? `Doğru: ${m[0]} yatırım maliyeti, ${title} uygulamasının bir dezavantajıdır.` : `Yanlış: ${o}, ${title} için spesifik bir dezavantaj değildir; aynı modülün farklı bir zorluğudur.`)) });
 
-  // 10. Case study
   const caseOpts = shuffle(rng, [`${app[0]} sektöründe ${p[0]} iyileştirilmiştir`, `${app[1] || app[0]} alanında ${p[1] || p[0]} artırılmıştır`, `${proc[0]} adımında verim %${Math.floor(rng() * 20)} yükselmiştir`, `${s[0]} uyumu ile reddi oranı düşmüştür`]);
   addQuestion({ type: "case_study", type_label: "Vaka Çalışması", question: `"${title}" uygulamasının sonuçlarından hangisi bir vaka çalışmasında beklenir?`, options: caseOpts, correct_index: caseOpts.findIndex((o) => o.startsWith(app[0])), explanations: caseOpts.map((o) => (o.startsWith(app[0]) ? `Doğru: ${app[0]} alanında ${title} uygulaması ${p[0]} iyileştirmesi sağlar.` : `Yanlış: ${o}, ${title} vaka sonuçlarından biri değildir; aynı modülün farklı bir uygulama sonucudur.`)) });
 
-  // 11-13. Children-based
   children.slice(0, 3).forEach((child) => {
     if (questions.length >= 15) return;
     const correct = child.title;
@@ -441,7 +420,6 @@ function buildQuiz(node: any, profile: DomainProfile, children: any[], siblings:
     addQuestion({ type: "definition", type_label: "Tanım", question: `"${title}" kapsamında "${child.description || child.title}" ifadesi hangisini tanımlar?`, options: opts, correct_index: opts.findIndex((o) => o === correct), explanations: opts.map((o) => (o === correct ? `Doğru: ${child.title}, ${title} konusunun bir alt başlığıdır.` : `Yanlış: ${o}, ${title} alt başlığı değildir; aynı modülün farklı bir konusudur.`)) });
   });
 
-  // 14. Glossary
   if (questions.length < 14 && Object.keys(gloss).length >= 2) {
     const entries = Object.entries(gloss);
     const [term, def] = entries[0];
@@ -451,13 +429,11 @@ function buildQuiz(node: any, profile: DomainProfile, children: any[], siblings:
     addQuestion({ type: "definition", type_label: "Tanım", question: `"${term}" teriminin doğru tanımı hangisidir?`, options: opts, correct_index: opts.findIndex((o) => o === def), explanations: opts.map((o) => (o === def ? `Doğru: "${term}" tanımı: ${def}` : `Yanlış: Bu tanım "${term}" için geçerli değildir; aynı modülün farklı bir terimine aittir.`)) });
   }
 
-  // 15. Materials
   if (questions.length < 15 && mat.length >= 4) {
     const opts = shuffle(rng, [mat[0], ...sameModuleDistractors.wrongMats]);
     addQuestion({ type: "technical_properties", type_label: "Teknik Özellik", question: `"${title}" sürecinde aşağıdaki malzemelerden hangisi kullanılır?`, options: opts, correct_index: opts.findIndex((o) => o === mat[0]), explanations: opts.map((o) => (o === mat[0] ? `Doğru: ${mat[0]}, ${title} sürecinde kullanılan temel malzemedir.` : `Yanlış: ${o}, ${title} sürecinde birincil malzeme değildir; aynı modülün farklı bir malzemesidir.`)) });
   }
 
-  // 16. Standards
   if (questions.length < 15 && s.length >= 2) {
     const opts = shuffle(rng, [s[0], ...sameModuleDistractors.wrongStandards]);
     addQuestion({ type: "technical_properties", type_label: "Teknik Özellik", question: `"${title}" için hangi standart referans alınır?`, options: opts, correct_index: opts.findIndex((o) => o === s[0]), explanations: opts.map((o) => (o === s[0] ? `Doğru: ${s[0]}, ${title} kapsamında referans alınan standarttır.` : `Yanlış: ${o}, ${title} için referans standart değildir; aynı modülün farklı bir standardıdır.`)) });
@@ -480,25 +456,20 @@ function buildFlashcards(node: any, profile: DomainProfile, children: any[], rng
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
-
   try {
     const { slug, difficulty = "intermediate", force = false } = await req.json();
     if (!slug) return new Response(JSON.stringify({ error: "slug gereklidir" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
     const nodeRes = await fetch(`${supabaseUrl}/rest/v1/content_nodes?slug=eq.${slug}&select=*`, { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } });
     const nodeData = await nodeRes.json();
     if (!nodeData || nodeData.length === 0) return new Response(JSON.stringify({ error: "Ders bulunamadı" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const node = nodeData[0];
-
     if (!force) {
       const cacheRes = await fetch(`${supabaseUrl}/rest/v1/generated_content?node_slug=eq.${slug}&content_type=eq.full_lesson&difficulty=eq.${difficulty}&select=payload&order=created_at.desc&limit=1`, { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } });
       const cacheData = await cacheRes.json();
       if (cacheData && cacheData.length > 0) return new Response(JSON.stringify({ cached: true, content: cacheData[0].payload }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-
     const allRes = await fetch(`${supabaseUrl}/rest/v1/content_nodes?select=*&order=position.asc`, { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } });
     const allNodes = await allRes.json();
     const children = allNodes.filter((n: any) => n.parent_id === node.id);
@@ -507,16 +478,12 @@ Deno.serve(async (req: Request) => {
     const profile = getProfile(moduleSlug);
     const seed = slugToSeed(slug) + (difficulty === "beginner" ? 1 : difficulty === "advanced" ? 3 : 2);
     const rng = seededRandom(seed);
-
     const sections = buildSections(node, profile, children, siblings, rng);
     const quiz = buildQuiz(node, profile, children, siblings, rng);
     const flashcards = buildFlashcards(node, profile, children, rng);
     const images = await fetchImages(profile.imageQueries, rng, 6);
-
     const content = { node_slug: slug, node_title: node.title, difficulty, module: moduleSlug, sections, quiz, flashcards, images, generated_at: new Date().toISOString() };
-
     await fetch(`${supabaseUrl}/rest/v1/generated_content`, { method: "POST", headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ node_slug: slug, node_id: node.id, content_type: "full_lesson", difficulty, payload: content }) });
-
     return new Response(JSON.stringify({ cached: false, content }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     return new Response(JSON.stringify({ error: `Hata: ${err.message}` }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });

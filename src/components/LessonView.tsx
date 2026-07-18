@@ -1,39 +1,23 @@
 import { useState, useEffect, useCallback } from "react";
-import {
-  fetchCachedLesson,
-  fetchSiblings,
-  type ContentNode,
-} from "../lib/supabase";
+import { fetchCachedLesson, fetchSiblings, type ContentNode } from "../lib/supabase";
 import { fetchNotes, saveNote } from "../lib/lesson";
 
 interface LessonContent {
-  node_slug: string;
-  node_title: string;
-  difficulty: string;
-  module: string;
-  sections: Record<string, any>;
-  quiz: any[];
-  flashcards: any[];
-  images: string[];
+  node_slug: string; node_title: string; difficulty: string; module: string;
+  sections: Record<string, any>; quiz: any[]; flashcards: any[]; images: string[];
   generated_at: string;
 }
 
 interface Props {
-  node: ContentNode;
-  onNavigate: (slug: string) => void;
-  onBackToModule: () => void;
-  onBackToDashboard: () => void;
+  node: ContentNode; onNavigate: (slug: string) => void;
+  onBackToModule: () => void; onBackToDashboard: () => void;
   onRegenerate: (slug: string) => Promise<void>;
 }
 
 type Tab = "content" | "visuals" | "quiz" | "flashcards" | "notes";
 
 const TAB_LABELS: Record<Tab, string> = {
-  content: "İçerik",
-  visuals: "Görsel",
-  quiz: "Quiz",
-  flashcards: "Kartlar",
-  notes: "Notlar",
+  content: "İçerik", visuals: "Görsel", quiz: "Quiz", flashcards: "Kartlar", notes: "Notlar",
 };
 
 const SECTION_ORDER = [
@@ -65,40 +49,24 @@ export default function LessonView({ node, onNavigate, onBackToModule, onBackToD
   const [regenerating, setRegenerating] = useState(false);
 
   const loadLesson = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
       const cached = await fetchCachedLesson(node.slug);
-      if (!cached) {
-        setError("Bu ders için içerik henüz üretilmemiş. Panele dönüp içerik üretimini başlatın.");
-        setLoading(false);
-        return;
-      }
+      if (!cached) { setError("Bu ders için içerik henüz üretilmemiş. Panele dönüp içerik üretimini başlatın."); setLoading(false); return; }
       setContent(cached);
-      const sibs = await fetchSiblings(node);
-      setSiblings(sibs);
-      const n = await fetchNotes(node.slug);
-      setNote(n);
-    } catch (e: any) {
-      setError(e.message || "Ders yüklenemedi");
-    } finally {
-      setLoading(false);
-    }
+      setSiblings(await fetchSiblings(node));
+      setNote(await fetchNotes(node.slug));
+    } catch (e: any) { setError(e.message || "Ders yüklenemedi"); }
+    finally { setLoading(false); }
   }, [node.slug]);
 
   useEffect(() => { loadLesson(); }, [loadLesson]);
 
   const handleRegenerate = async () => {
-    setRegenerating(true);
-    setError(null);
-    try {
-      await onRegenerate(node.slug);
-      await loadLesson();
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setRegenerating(false);
-    }
+    setRegenerating(true); setError(null);
+    try { await onRegenerate(node.slug); await loadLesson(); }
+    catch (e: any) { setError(e.message); }
+    finally { setRegenerating(false); }
   };
 
   const handleSaveNote = async () => {
@@ -114,9 +82,7 @@ export default function LessonView({ node, onNavigate, onBackToModule, onBackToD
       <div className="lv-error">
         <p className="lv-error-text">{error}</p>
         <div className="lv-error-actions">
-          <button className="lv-btn primary" onClick={handleRegenerate} disabled={regenerating}>
-            {regenerating ? "Üretiliyor..." : "İçeriği Üret"}
-          </button>
+          <button className="lv-btn primary" onClick={handleRegenerate} disabled={regenerating}>{regenerating ? "Üretiliyor..." : "İçeriği Üret"}</button>
           <button className="lv-btn ghost" onClick={onBackToDashboard}>Panele Dön</button>
         </div>
       </div>
@@ -136,9 +102,7 @@ export default function LessonView({ node, onNavigate, onBackToModule, onBackToD
           <span className="lv-module">{content.module.replace(/-/g, " ")}</span>
           <h1 className="lv-title">{content.node_title}</h1>
         </div>
-        <button className="lv-regen" onClick={handleRegenerate} disabled={regenerating} title="Yönetici: İçeriği yeniden üret">
-          {regenerating ? "···" : "↻"}
-        </button>
+        <button className="lv-regen" onClick={handleRegenerate} disabled={regenerating} title="Yönetici: İçeriği yeniden üret">{regenerating ? "···" : "↻"}</button>
       </div>
 
       <div className="lv-tabs">
@@ -173,11 +137,7 @@ export default function LessonView({ node, onNavigate, onBackToModule, onBackToD
 function ContentTab({ sections }: { sections: Record<string, any> }) {
   return (
     <div className="ct">
-      {SECTION_ORDER.map((key) => {
-        const s = sections[key];
-        if (!s) return null;
-        return <SectionCard key={key} section={s} />;
-      })}
+      {SECTION_ORDER.map((key) => { const s = sections[key]; return s ? <SectionCard key={key} section={s} /> : null; })}
     </div>
   );
 }
@@ -194,24 +154,14 @@ function SectionCard({ section }: { section: any }) {
 function SectionBody({ section }: { section: any }) {
   if (section.type === "text") return <p className="sc-text">{renderText(section.content)}</p>;
   if (section.type === "list") {
-    return (
-      <ul className="sc-list">
-        {section.items.map((item: string, i: number) => <li key={i}>{renderText(item)}</li>)}
-      </ul>
-    );
+    return <ul className="sc-list">{section.items.map((item: string, i: number) => <li key={i}>{renderText(item)}</li>)}</ul>;
   }
   if (section.type === "table") {
     return (
       <div className="sc-table-wrap">
         <table className="sc-table">
-          <thead>
-            <tr>{section.headers.map((h: string, i: number) => <th key={i}>{h}</th>)}</tr>
-          </thead>
-          <tbody>
-            {section.rows.map((row: string[], i: number) => (
-              <tr key={i}>{row.map((cell, j) => <td key={j}>{renderText(cell)}</td>)}</tr>
-            ))}
-          </tbody>
+          <thead><tr>{section.headers.map((h: string, i: number) => <th key={i}>{h}</th>)}</tr></thead>
+          <tbody>{section.rows.map((row: string[], i: number) => <tr key={i}>{row.map((cell, j) => <td key={j}>{renderText(cell)}</td>)}</tr>)}</tbody>
         </table>
       </div>
     );
@@ -220,10 +170,7 @@ function SectionBody({ section }: { section: any }) {
     return (
       <dl className="sc-glossary">
         {section.items.map((item: any, i: number) => (
-          <div key={i} className="sc-glossary-item">
-            <dt>{item.term}</dt>
-            <dd>{item.definition}</dd>
-          </div>
+          <div key={i} className="sc-glossary-item"><dt>{item.term}</dt><dd>{item.definition}</dd></div>
         ))}
       </dl>
     );
@@ -231,10 +178,7 @@ function SectionBody({ section }: { section: any }) {
   if (section.type === "diagram") {
     return (
       <div className="sc-diagram">
-        <div className="sc-diagram-box">
-          <span className="sc-diagram-icon">▦</span>
-          <p className="sc-diagram-prompt">{section.prompt}</p>
-        </div>
+        <div className="sc-diagram-box"><span className="sc-diagram-icon">▦</span><p className="sc-diagram-prompt">{section.prompt}</p></div>
         <p className="sc-diagram-caption">{section.caption}</p>
       </div>
     );
@@ -242,16 +186,14 @@ function SectionBody({ section }: { section: any }) {
   return null;
 }
 
-function VisualsTab({ sections, images, title }: { sections: Record<string, any>; images: string[]; title: string; }) {
+function VisualsTab({ sections, images, title }: { sections: Record<string, any>; images: string[]; title: string }) {
   const diagram = sections["gorsel_sema"];
   return (
     <div className="vt">
       {images.length > 0 && (
         <div className="vt-gallery">
           {images.map((url, i) => (
-            <div key={i} className="vt-image-card">
-              <img src={url} alt={`${title} - görsel ${i + 1}`} loading="lazy" className="vt-image" />
-            </div>
+            <div key={i} className="vt-image-card"><img src={url} alt={`${title} - görsel ${i + 1}`} loading="lazy" className="vt-image" /></div>
           ))}
         </div>
       )}
@@ -259,10 +201,7 @@ function VisualsTab({ sections, images, title }: { sections: Record<string, any>
       {diagram && (
         <div className="vt-card">
           <h3>{diagram.title}</h3>
-          <div className="vt-diagram-box">
-            <span className="sc-diagram-icon">▦</span>
-            <p>{diagram.prompt}</p>
-          </div>
+          <div className="vt-diagram-box"><span className="sc-diagram-icon">▦</span><p>{diagram.prompt}</p></div>
           <p className="sc-diagram-caption">{diagram.caption}</p>
         </div>
       )}
@@ -274,26 +213,19 @@ function QuizTab({ quiz }: { quiz: any[] }) {
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [submitted, setSubmitted] = useState(false);
   const score = quiz.reduce((acc, q, i) => acc + (answers[i] === q.correct_index ? 1 : 0), 0);
-
   if (quiz.length === 0) return <div className="qt-empty">Bu ders için quiz bulunmamaktadır.</div>;
-
   return (
     <div className="qt">
       {submitted && (
         <div className="qt-result">
           <span className="qt-result-score">{score} / {quiz.length}</span>
-          <span className="qt-result-msg">
-            {score >= quiz.length * 0.7 ? "Tebrikler!" : score >= quiz.length * 0.5 ? "İyi, tekrar etmek faydalı olur." : "Tekrar gözden geçirin."}
-          </span>
+          <span className="qt-result-msg">{score >= quiz.length * 0.7 ? "Tebrikler!" : score >= quiz.length * 0.5 ? "İyi, tekrar etmek faydalı olur." : "Tekrar gözden geçirin."}</span>
           <button className="lv-btn primary sm" onClick={() => { setAnswers({}); setSubmitted(false); }}>Tekrar Dene</button>
         </div>
       )}
       {quiz.map((q, qi) => (
         <div key={qi} className="qt-card">
-          <div className="qt-card-head">
-            <span className="qt-type">{q.type_label}</span>
-            <span className="qt-num">{qi + 1}</span>
-          </div>
+          <div className="qt-card-head"><span className="qt-type">{q.type_label}</span><span className="qt-num">{qi + 1}</span></div>
           <p className="qt-q">{q.question}</p>
           <div className="qt-opts">
             {q.options.map((opt: string, oi: number) => {
@@ -305,8 +237,7 @@ function QuizTab({ quiz }: { quiz: any[] }) {
                 <button key={oi}
                   className={`qt-opt ${sel ? "sel" : ""} ${showRes ? (correct ? "cor" : "inc") : ""} ${showCor ? "cor" : ""}`}
                   onClick={() => !submitted && setAnswers({ ...answers, [qi]: oi })}
-                  disabled={submitted}
-                >
+                  disabled={submitted}>
                   <span>{opt}</span>
                   {showCor && <span className="qt-mark">✓</span>}
                   {showRes && !correct && <span className="qt-mark">✗</span>}
@@ -319,13 +250,9 @@ function QuizTab({ quiz }: { quiz: any[] }) {
               <p className="qt-exp-main">{q.explanation}</p>
               <details className="qt-exp-detail">
                 <summary>Seçenek açıklamaları</summary>
-                <ul>
-                  {q.options.map((opt: string, oi: number) => (
-                    <li key={oi} className={oi === q.correct_index ? "ok" : "no"}>
-                      <strong>{opt}: </strong>{q.explanations[oi]}
-                    </li>
-                  ))}
-                </ul>
+                <ul>{q.options.map((opt: string, oi: number) => (
+                  <li key={oi} className={oi === q.correct_index ? "ok" : "no"}><strong>{opt}: </strong>{q.explanations[oi]}</li>
+                ))}</ul>
               </details>
             </div>
           )}
@@ -357,7 +284,7 @@ function FlashcardsTab({ cards }: { cards: any[] }) {
   );
 }
 
-function NotesTab({ note, setNote, onSave, saved }: { note: string; setNote: (n: string) => void; onSave: () => void; saved: boolean; }) {
+function NotesTab({ note, setNote, onSave, saved }: { note: string; setNote: (n: string) => void; onSave: () => void; saved: boolean }) {
   return (
     <div className="nt">
       <h3 className="nt-title">Ders Notlarım</h3>

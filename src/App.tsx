@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { useNavigation, type Nav } from "./navigation";
+import { useNavigation, type Nav, type Screen } from "./navigation";
 import { NavButtons } from "./components/NavButtons";
 import {
   generateTopics,
@@ -25,50 +25,127 @@ type Toast = { kind: "success" | "error" | "warning"; text: string } | null;
 const TOTAL_TOPICS =
   CATEGORY_COUNTS.Textile + CATEGORY_COUNTS.Fashion + CATEGORY_COUNTS.Innerwear;
 
+interface ModuleDef {
+  screen: Screen;
+  icon: string;
+  title: string;
+  desc: string;
+  available: boolean;
+}
+
+const APP_MODULES: ModuleDef[] = [
+  { screen: "textile-knowledge", icon: "📚", title: "Textile Knowledge", desc: "Tekstil bilgi tabanı ve referans kütüphanesi", available: false },
+  { screen: "fashion", icon: "👗", title: "Fashion", desc: "Moda tasarımı ve trend yönetimi", available: false },
+  { screen: "ai-assistant", icon: "🤖", title: "AI Assistant", desc: "Yapay zeka destekli asistan", available: false },
+  { screen: "pdf-library", icon: "📄", title: "Smart PDF Library", desc: "Akıllı PDF kütüphanesi ve arama", available: false },
+  { screen: "flashcards", icon: "🃏", title: "Flashcards", desc: "Bilgi kartları ile çalışma", available: false },
+  { screen: "quiz", icon: "❓", title: "Quiz", desc: "Bilgi testleri ve sınavlar", available: false },
+  { screen: "textile-os", icon: "🧵", title: "Textile OS", desc: "Tekstil işletme yönetim sistemi", available: true },
+  { screen: "elise-brand-studio", icon: "💎", title: "Elisé Brand Studio", desc: "Marka stüdyosu ve tasarım", available: false },
+];
+
+const TEXTILE_OS_MODULES: ModuleDef[] = [
+  { screen: "skp", icon: "✨", title: "Starter Knowledge Pack", desc: "Tekstil, moda ve iç giyim konularından rastgele paketler üretin", available: true },
+  { screen: "trend-analytics", icon: "📊", title: "Trend Analytics", desc: "Sektör trendlerini analiz edin", available: false },
+  { screen: "supply-chain", icon: "🏭", title: "Supply Chain Manager", desc: "Tedarik zincirinizi yönetin", available: false },
+  { screen: "quality-lab", icon: "🧪", title: "Quality Lab", desc: "Kalite test süreçlerini takip edin", available: false },
+  { screen: "inventory", icon: "📦", title: "Inventory", desc: "Stok yönetimi", available: false },
+  { screen: "settings", icon: "⚙️", title: "Settings", desc: "Sistem ayarları", available: false },
+];
+
 export default function App() {
   const nav = useNavigation();
 
   return (
     <div className="app">
-      {nav.current === "dashboard" && <Dashboard nav={nav} />}
+      {nav.current === "app-dashboard" && <AppDashboard nav={nav} />}
+      {nav.current === "textile-os" && <TextileOSWorkspace nav={nav} />}
       {nav.current === "skp" && <StarterKnowledgePack nav={nav} />}
-      {nav.current === "generate" && <GenerateScreen nav={nav} />}
-      {nav.current === "review" && <ReviewScreen nav={nav} />}
-      {nav.current === "save-confirm" && <SaveConfirmScreen nav={nav} />}
-      {nav.current === "saved" && <SavedScreen nav={nav} />}
-      {nav.current === "plan" && <PlanScreen nav={nav} />}
+      {nav.current === "skp-generate" && <GenerateScreen nav={nav} />}
+      {nav.current === "skp-review" && <ReviewScreen nav={nav} />}
+      {nav.current === "skp-save" && <SaveConfirmScreen nav={nav} />}
+      {nav.current === "skp-saved" && <SavedScreen nav={nav} />}
+      {nav.current === "skp-plan" && <PlanScreen nav={nav} />}
+      {isPlaceholder(nav.current) && <PlaceholderScreen nav={nav} />}
     </div>
   );
 }
 
-function Dashboard({ nav }: { nav: Nav }) {
-  const modules = [
-    { id: "skp", icon: "✨", title: "Starter Knowledge Pack", desc: "Tekstil, moda ve iç giyim konularından rastgele paketler üretin" },
-    { id: "skp", icon: "📊", title: "Trend Analytics", desc: "Sektör trendlerini analiz edin (yakında)" },
-    { id: "skp", icon: "🏭", title: "Supply Chain Manager", desc: "Tedarik zincirinizi yönetin (yakında)" },
-    { id: "skp", icon: "🧪", title: "Quality Lab", desc: "Kalite test süreçlerini takip edin (yakında)" },
-    { id: "skp", icon: "📦", title: "Inventory", desc: "Stok yönetimi (yakında)" },
-    { id: "skp", icon: "⚙️", title: "Settings", desc: "Sistem ayarları (yakında)" },
-  ];
+function isPlaceholder(screen: Screen): boolean {
+  return [
+    "textile-knowledge",
+    "fashion",
+    "ai-assistant",
+    "pdf-library",
+    "flashcards",
+    "quiz",
+    "elise-brand-studio",
+    "trend-analytics",
+    "supply-chain",
+    "quality-lab",
+    "inventory",
+    "settings",
+  ].includes(screen);
+}
 
+function AppDashboard({ nav }: { nav: Nav }) {
   return (
     <>
       <header className="header">
         <h1>Textile OS</h1>
-        <p>Tekstil, moda ve iç giyim sektörü için tümleşik yönetim platformu</p>
+        <p>
+          Tekstil, moda ve iç giyim sektörü için tümleşik öğrenme ve yönetim
+          platformu. Bir modül seçerek başlayın.
+        </p>
       </header>
 
       <div className="menu-grid">
-        {modules.map((m, i) => (
+        {APP_MODULES.map((m) => (
           <button
-            key={i}
+            key={m.screen}
             type="button"
-            className={`menu-card ${m.id === "skp" && i === 0 ? "primary" : ""}`}
-            onClick={() => m.id === "skp" && i === 0 && nav.navigate("skp")}
+            className={`menu-card ${m.available ? "primary" : "disabled"}`}
+            onClick={() => m.available && nav.navigate(m.screen)}
+            disabled={!m.available}
           >
             <span className="menu-icon">{m.icon}</span>
             <span className="menu-title">{m.title}</span>
-            <span className="menu-desc">{m.desc}</span>
+            <span className="menu-desc">
+              {m.available ? m.desc : `${m.desc} (yakında)`}
+            </span>
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function TextileOSWorkspace({ nav }: { nav: Nav }) {
+  return (
+    <>
+      <NavButtons nav={nav} />
+      <header className="header">
+        <h1>Textile OS</h1>
+        <p>
+          Tekstil işletme yönetim sistemi. Starter Knowledge Pack ile başlayın veya
+          diğer modülleri keşfedin.
+        </p>
+      </header>
+
+      <div className="menu-grid">
+        {TEXTILE_OS_MODULES.map((m) => (
+          <button
+            key={m.screen}
+            type="button"
+            className={`menu-card ${m.available ? "primary" : "disabled"}`}
+            onClick={() => m.available && nav.navigate(m.screen)}
+            disabled={!m.available}
+          >
+            <span className="menu-icon">{m.icon}</span>
+            <span className="menu-title">{m.title}</span>
+            <span className="menu-desc">
+              {m.available ? m.desc : `${m.desc} (yakında)`}
+            </span>
           </button>
         ))}
       </div>
@@ -79,7 +156,7 @@ function Dashboard({ nav }: { nav: Nav }) {
 function StarterKnowledgePack({ nav }: { nav: Nav }) {
   return (
     <>
-      <NavButtons nav={nav} backLabel="Geri" />
+      <NavButtons nav={nav} />
       <header className="header">
         <h1>Starter Knowledge Pack</h1>
         <p>
@@ -96,7 +173,7 @@ function StarterKnowledgePack({ nav }: { nav: Nav }) {
         <button
           type="button"
           className="menu-card primary"
-          onClick={() => nav.navigate("generate")}
+          onClick={() => nav.navigate("skp-generate")}
         >
           <span className="menu-icon">✨</span>
           <span className="menu-title">Konu Üret</span>
@@ -108,7 +185,7 @@ function StarterKnowledgePack({ nav }: { nav: Nav }) {
         <button
           type="button"
           className="menu-card"
-          onClick={() => nav.navigate("saved")}
+          onClick={() => nav.navigate("skp-saved")}
         >
           <span className="menu-icon">💾</span>
           <span className="menu-title">Kaydedilen Paketler</span>
@@ -120,7 +197,7 @@ function StarterKnowledgePack({ nav }: { nav: Nav }) {
         <button
           type="button"
           className="menu-card"
-          onClick={() => nav.navigate("plan")}
+          onClick={() => nav.navigate("skp-plan")}
         >
           <span className="menu-icon">📅</span>
           <span className="menu-title">Günlük Plan</span>
@@ -161,12 +238,12 @@ function GenerateScreen({ nav }: { nav: Nav }) {
       skpState.topics = result.topics;
       skpState.message = null;
     }
-    nav.navigate("review");
+    nav.navigate("skp-review");
   }, [size, category, nav]);
 
   return (
     <>
-      <NavButtons nav={nav} backLabel="Starter Knowledge Pack" />
+      <NavButtons nav={nav} />
       <section className="card">
         <h2 className="section-title">Konu Paketi Oluştur</h2>
         <p className="section-desc">
@@ -236,11 +313,12 @@ function ReviewScreen({ nav }: { nav: Nav }) {
     setBusy("save");
     setToast(null);
     const res = await savePackage(topics, skpState.category);
-    setToast({ kind: res.ok ? "success" : "error", text: res.message });
-    skpState.toast = { kind: res.ok ? "success" : "error", text: res.message };
+    const t: Toast = { kind: res.ok ? "success" : "error", text: res.message };
+    setToast(t);
+    skpState.toast = t;
     setBusy(null);
     if (res.ok) {
-      nav.navigate("save-confirm");
+      nav.navigate("skp-save");
     }
   };
 
@@ -249,8 +327,9 @@ function ReviewScreen({ nav }: { nav: Nav }) {
     setBusy("distribute");
     setToast(null);
     const res = await distributeToDailyPlan(topics, skpState.category);
-    setToast({ kind: res.ok ? "success" : "error", text: res.message });
-    skpState.toast = { kind: res.ok ? "success" : "error", text: res.message };
+    const t: Toast = { kind: res.ok ? "success" : "error", text: res.message };
+    setToast(t);
+    skpState.toast = t;
     setBusy(null);
   };
 
@@ -273,7 +352,7 @@ function ReviewScreen({ nav }: { nav: Nav }) {
 
   return (
     <>
-      <NavButtons nav={nav} backLabel="Konu Üret" />
+      <NavButtons nav={nav} />
       <section className="results-section">
         <div className="results-header">
           <h2>{hasTopics ? "Üretilen Konular" : "Sonuç"}</h2>
@@ -394,7 +473,7 @@ function ReviewScreen({ nav }: { nav: Nav }) {
 function SaveConfirmScreen({ nav }: { nav: Nav }) {
   return (
     <>
-      <NavButtons nav={nav} backLabel="Konular" />
+      <NavButtons nav={nav} />
       <section className="results-section">
         <div className="insufficient success-card">
           <div className="insufficient-icon success">✓</div>
@@ -407,15 +486,11 @@ function SaveConfirmScreen({ nav }: { nav: Nav }) {
             <button
               type="button"
               className="action-btn primary"
-              onClick={() => nav.navigate("saved")}
+              onClick={() => nav.navigate("skp-saved")}
             >
               Kaydedilen Paketleri Gör
             </button>
-            <button
-              type="button"
-              className="action-btn ghost"
-              onClick={nav.home}
-            >
+            <button type="button" className="action-btn ghost" onClick={nav.home}>
               Ana Panoya Dön
             </button>
           </div>
@@ -448,7 +523,7 @@ function SavedScreen({ nav }: { nav: Nav }) {
 
   return (
     <>
-      <NavButtons nav={nav} backLabel="Starter Knowledge Pack" />
+      <NavButtons nav={nav} />
       <section className="results-section">
         <div className="results-header">
           <h2>Kaydedilen Paketler</h2>
@@ -506,7 +581,7 @@ function SavedScreen({ nav }: { nav: Nav }) {
 function PlanScreen({ nav }: { nav: Nav }) {
   return (
     <>
-      <NavButtons nav={nav} backLabel="Starter Knowledge Pack" />
+      <NavButtons nav={nav} />
       <section className="results-section">
         <div className="results-header">
           <h2>Günlük Plan</h2>
@@ -522,6 +597,29 @@ function PlanScreen({ nav }: { nav: Nav }) {
             3. Sistem konularınızı bugünden başlayarak günlük çalışma planına
             dağıtır.
           </p>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function PlaceholderScreen({ nav }: { nav: Nav }) {
+  return (
+    <>
+      <NavButtons nav={nav} />
+      <section className="results-section">
+        <div className="insufficient">
+          <div className="insufficient-icon">🚧</div>
+          <h2>Bu modül yakında</h2>
+          <p>
+            Bu modül henüz geliştirme aşamasındadır. Ana panoya dönebilir veya
+            Textile OS içindeki Starter Knowledge Pack modülünü kullanabilirsiniz.
+          </p>
+          <div className="insufficient-actions">
+            <button type="button" className="action-btn primary" onClick={nav.home}>
+              Ana Panoya Dön
+            </button>
+          </div>
         </div>
       </section>
     </>

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TakvimRouteImport } from './routes/takvim'
 import { Route as QuizRouteImport } from './routes/quiz'
+import { Route as PdfKutuphaneRouteImport } from './routes/pdf-kutuphane'
 import { Route as PdfRouteImport } from './routes/pdf'
 import { Route as HaftalikTekrarRouteImport } from './routes/haftalik-tekrar'
 import { Route as GunlukTekrarRouteImport } from './routes/gunluk-tekrar'
@@ -28,6 +29,11 @@ const TakvimRoute = TakvimRouteImport.update({
 const QuizRoute = QuizRouteImport.update({
   id: '/quiz',
   path: '/quiz',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PdfKutuphaneRoute = PdfKutuphaneRouteImport.update({
+  id: '/pdf-kutuphane',
+  path: '/pdf-kutuphane',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PdfRoute = PdfRouteImport.update({
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/gunluk-tekrar': typeof GunlukTekrarRoute
   '/haftalik-tekrar': typeof HaftalikTekrarRoute
   '/pdf': typeof PdfRoute
+  '/pdf-kutuphane': typeof PdfKutuphaneRoute
   '/quiz': typeof QuizRoute
   '/takvim': typeof TakvimRoute
   '/kategori/$slug': typeof KategoriSlugRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/gunluk-tekrar': typeof GunlukTekrarRoute
   '/haftalik-tekrar': typeof HaftalikTekrarRoute
   '/pdf': typeof PdfRoute
+  '/pdf-kutuphane': typeof PdfKutuphaneRoute
   '/quiz': typeof QuizRoute
   '/takvim': typeof TakvimRoute
   '/kategori/$slug': typeof KategoriSlugRoute
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/gunluk-tekrar': typeof GunlukTekrarRoute
   '/haftalik-tekrar': typeof HaftalikTekrarRoute
   '/pdf': typeof PdfRoute
+  '/pdf-kutuphane': typeof PdfKutuphaneRoute
   '/quiz': typeof QuizRoute
   '/takvim': typeof TakvimRoute
   '/kategori/$slug': typeof KategoriSlugRoute
@@ -118,6 +127,7 @@ export interface FileRouteTypes {
     | '/gunluk-tekrar'
     | '/haftalik-tekrar'
     | '/pdf'
+    | '/pdf-kutuphane'
     | '/quiz'
     | '/takvim'
     | '/kategori/$slug'
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/gunluk-tekrar'
     | '/haftalik-tekrar'
     | '/pdf'
+    | '/pdf-kutuphane'
     | '/quiz'
     | '/takvim'
     | '/kategori/$slug'
@@ -142,6 +153,7 @@ export interface FileRouteTypes {
     | '/gunluk-tekrar'
     | '/haftalik-tekrar'
     | '/pdf'
+    | '/pdf-kutuphane'
     | '/quiz'
     | '/takvim'
     | '/kategori/$slug'
@@ -155,6 +167,7 @@ export interface RootRouteChildren {
   GunlukTekrarRoute: typeof GunlukTekrarRoute
   HaftalikTekrarRoute: typeof HaftalikTekrarRoute
   PdfRoute: typeof PdfRoute
+  PdfKutuphaneRoute: typeof PdfKutuphaneRoute
   QuizRoute: typeof QuizRoute
   TakvimRoute: typeof TakvimRoute
   KategoriSlugRoute: typeof KategoriSlugRoute
@@ -174,6 +187,13 @@ declare module '@tanstack/react-router' {
       path: '/quiz'
       fullPath: '/quiz'
       preLoaderRoute: typeof QuizRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pdf-kutuphane': {
+      id: '/pdf-kutuphane'
+      path: '/pdf-kutuphane'
+      fullPath: '/pdf-kutuphane'
+      preLoaderRoute: typeof PdfKutuphaneRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pdf': {
@@ -243,6 +263,7 @@ const rootRouteChildren: RootRouteChildren = {
   GunlukTekrarRoute: GunlukTekrarRoute,
   HaftalikTekrarRoute: HaftalikTekrarRoute,
   PdfRoute: PdfRoute,
+  PdfKutuphaneRoute: PdfKutuphaneRoute,
   QuizRoute: QuizRoute,
   TakvimRoute: TakvimRoute,
   KategoriSlugRoute: KategoriSlugRoute,

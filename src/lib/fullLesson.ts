@@ -1,22 +1,21 @@
 import { supabase } from "./supabase";
+import type { Difficulty } from "./engine";
 
-export type ContentType = "lesson" | "quiz" | "flashcards" | "summary" | "glossary";
-export type Difficulty = "beginner" | "intermediate" | "advanced";
-
-export interface EngineResult {
+export interface FullLessonResult {
   cached: boolean;
   generated_at: string;
+  generated_by?: string;
   content: Record<string, unknown>;
 }
 
-const FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-engine`;
+const FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/full-lesson`;
 
-export async function generateContent(params: {
+export async function generateFullLesson(params: {
   slug: string;
-  content_type: ContentType;
   difficulty?: Difficulty;
   force?: boolean;
-}): Promise<EngineResult> {
+  use_ai?: boolean;
+}): Promise<FullLessonResult> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
@@ -29,9 +28,9 @@ export async function generateContent(params: {
     headers,
     body: JSON.stringify({
       slug: params.slug,
-      content_type: params.content_type,
       difficulty: params.difficulty ?? "intermediate",
       force: params.force ?? false,
+      use_ai: params.use_ai ?? true,
     }),
   });
 
@@ -48,22 +47,25 @@ export async function generateContent(params: {
     throw new Error(e?.error ?? `İstek başarısız (HTTP ${res.status})`);
   }
 
-  return json as EngineResult;
+  return json as FullLessonResult;
 }
 
-export async function fetchCachedContent(
+export async function fetchCachedFullLesson(
   slug: string,
-  content_type: ContentType,
   difficulty: Difficulty,
-): Promise<EngineResult | null> {
+): Promise<FullLessonResult | null> {
   const { data, error } = await supabase
     .from("generated_content")
     .select("payload, updated_at")
     .eq("node_slug", slug)
-    .eq("content_type", content_type)
+    .eq("content_type", "full_lesson")
     .eq("difficulty", difficulty)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
-  return { cached: true, generated_at: data.updated_at, content: data.payload as Record<string, unknown> };
+  return {
+    cached: true,
+    generated_at: data.updated_at,
+    content: data.payload as Record<string, unknown>,
+  };
 }

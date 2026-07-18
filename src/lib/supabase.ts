@@ -9,6 +9,8 @@ export const supabase = createClient(url, anon, {
 
 export type NodeType = "module" | "submodule" | "lesson" | "topic" | "subtopic";
 
+export type Difficulty = "beginner" | "intermediate" | "advanced";
+
 export interface ContentNode {
   id: string;
   parent_id: string | null;

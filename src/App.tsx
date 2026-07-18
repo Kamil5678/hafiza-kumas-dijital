@@ -7,13 +7,7 @@ import {
   type ContentNode,
   type NodeType,
 } from "./lib/supabase";
-import {
-  generateContent,
-  fetchCachedContent,
-  type ContentType,
-  type Difficulty,
-  type EngineResult,
-} from "./lib/engine";
+import { LessonView } from "./components/LessonView";
 
 const TYPE_LABEL: Record<NodeType, string> = {
   module: "Modül",
@@ -24,20 +18,6 @@ const TYPE_LABEL: Record<NodeType, string> = {
 };
 
 const TYPE_ORDER: NodeType[] = ["module", "submodule", "lesson", "topic", "subtopic"];
-
-const CONTENT_TYPES: { value: ContentType; label: string }[] = [
-  { value: "lesson", label: "Ders" },
-  { value: "summary", label: "Özet" },
-  { value: "glossary", label: "Sözlük" },
-  { value: "flashcards", label: "Flash Kartlar" },
-  { value: "quiz", label: "Quiz" },
-];
-
-const DIFFICULTIES: { value: Difficulty; label: string }[] = [
-  { value: "beginner", label: "Başlangıç" },
-  { value: "intermediate", label: "Orta" },
-  { value: "advanced", label: "İleri" },
-];
 
 function Icon({ type }: { type: NodeType }) {
   const c = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
@@ -115,6 +95,8 @@ export default function App() {
   for (const t of TYPE_ORDER) grouped[t] = [];
   for (const c of children) grouped[c.type]?.push(c);
 
+  const showLesson = current && (current.type === "lesson" || current.type === "topic" || current.type === "subtopic");
+
   return (
     <div className="layout">
       <header className="navbar">
@@ -147,13 +129,9 @@ export default function App() {
 
         <section className="header">
           <div>
-            <div className="eyebrow">
-              {current ? TYPE_LABEL[current.type] : "Bilgi Bankası"}
-            </div>
-            <h1 className="title">
-              {current ? current.title : "Üniversite Seviyesinde Bilgi Ağacı"}
-            </h1>
-            {current?.description && <p className="desc">{current.description}</p>}
+            <div className="eyebrow">{current ? TYPE_LABEL[current.type] : "Bilgi Bankası"}</div>
+            <h1 className="title">{current ? current.title : "Üniversite Seviyesinde Bilgi Ağacı"}</h1>
+            {typeof current?.description === "string" && <p className="desc">{current.description}</p>}
             {!current && (
               <p className="desc">
                 Tekstil, Moda, İç Giyim, Sürdürülebilirlik, Strateji, İstatistik, Elisé Studio
@@ -161,22 +139,22 @@ export default function App() {
               </p>
             )}
           </div>
-          {current && (
-            <button className="btn-back" onClick={goHome}>← Tüm Modüller</button>
-          )}
+          {current && <button className="btn-back" onClick={goHome}>← Tüm Modüller</button>}
         </section>
 
         {error && <div className="error">Hata: {error}</div>}
 
-        {current && <EnginePanel node={current} />}
+        {showLesson && <LessonView node={current!} />}
 
         {loading ? (
           <div className="loading">Yükleniyor…</div>
         ) : children.length === 0 ? (
-          <div className="empty">
-            <div className="empty-icon">○</div>
-            <p>Bu dalın altında içerik kaydı yok.</p>
-          </div>
+          !showLesson && (
+            <div className="empty">
+              <div className="empty-icon">○</div>
+              <p>Bu dalın altında içerik kaydı yok.</p>
+            </div>
+          )
         ) : (
           <div className="groups">
             {TYPE_ORDER.filter((t) => (grouped[t]?.length ?? 0) > 0).map((t) => (
@@ -193,8 +171,7 @@ export default function App() {
                       <button
                         key={node.id}
                         className="card"
-                        onClick={() => !isLeaf && openNode(node)}
-                        disabled={isLeaf}
+                        onClick={() => openNode(node)}
                       >
                         <span className="card-icon"><Icon type={node.type} /></span>
                         <span className="card-body">
@@ -204,7 +181,7 @@ export default function App() {
                             {isLeaf ? "içerik yaprağı" : `${childCount} alt başlık`}
                           </span>
                         </span>
-                        {!isLeaf && <span className="card-arrow">→</span>}
+                        <span className="card-arrow">→</span>
                       </button>
                     );
                   })}
@@ -214,204 +191,6 @@ export default function App() {
           </div>
         )}
       </main>
-    </div>
-  );
-}
-
-function EnginePanel({ node }: { node: ContentNode }) {
-  const [contentType, setContentType] = useState<ContentType>("lesson");
-  const [difficulty, setDifficulty] = useState<Difficulty>("intermediate");
-  const [result, setResult] = useState<EngineResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const run = useCallback(async (force = false) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const cached = await fetchCachedContent(node.slug, contentType, difficulty);
-      if (cached && !force) {
-        setResult(cached);
-      } else {
-        const r = await generateContent({ slug: node.slug, content_type: contentType, difficulty, force });
-        setResult(r);
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      setResult(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [node.slug, contentType, difficulty]);
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const cached = await fetchCachedContent(node.slug, contentType, difficulty);
-        if (active) setResult(cached);
-      } catch (e) {
-        if (active) setError(e instanceof Error ? e.message : String(e));
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => { active = false; };
-  }, [node.slug, contentType, difficulty]);
-
-  return (
-    <section className="engine">
-      <div className="engine-head">
-        <div className="engine-title">AI Bilgi Motoru</div>
-        <div className="engine-controls">
-          <label className="control">
-            <span>Tür</span>
-            <select value={contentType} onChange={(e) => setContentType(e.target.value as ContentType)}>
-              {CONTENT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
-          </label>
-          <label className="control">
-            <span>Seviye</span>
-            <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as Difficulty)}>
-              {DIFFICULTIES.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
-            </select>
-          </label>
-          <button className="btn-engine" disabled={loading} onClick={() => run(false)}>
-            {loading ? "Üretiliyor…" : "İçeriği Göster"}
-          </button>
-          <button className="btn-engine ghost" disabled={loading} onClick={() => run(true)} title="Önbelleği atlayarak yeniden üret">
-            Yeniden Üret
-          </button>
-        </div>
-      </div>
-
-      {error && <div className="engine-error">Motor hatası: {error}</div>}
-
-      {loading && !result && <div className="engine-loading">İçerik hazırlanıyor…</div>}
-
-      {result && !loading && (
-        <ContentRenderer result={result} />
-      )}
-    </section>
-  );
-}
-
-function ContentRenderer({ result }: { result: EngineResult }) {
-  const c = result.content as Record<string, unknown>;
-  return (
-    <div className="content-render">
-      <div className="content-meta">
-        <span className={`badge ${result.cached ? "cached" : "fresh"}`}>
-          {result.cached ? "Önbellekten" : "Yeni üretildi"}
-        </span>
-        <span className="meta-date">{new Date(result.generated_at).toLocaleString("tr-TR")}</span>
-      </div>
-      <h3 className="content-title">{String(c.title ?? "")}</h3>
-      {typeof c.description === "string" && <p className="content-desc">{c.description}</p>}
-      {Array.isArray(c.module_path) && (
-        <div className="content-path">
-          {(c.module_path as string[]).map((p: string, i: number) => (
-            <span key={i}>{p}{i < (c.module_path as string[]).length - 1 ? " › " : ""}</span>
-          ))}
-        </div>
-      )}
-      <StructuredBody content={c} />
-    </div>
-  );
-}
-
-function StructuredBody({ content }: { content: Record<string, unknown> }) {
-  const obj = content as Record<string, unknown>;
-  return (
-    <div className="structured">
-      {Array.isArray(obj.learning_objectives) && obj.learning_objectives.length > 0 && (
-        <Block title="Öğrenme Hedefleri">
-          <ul>{(obj.learning_objectives as string[]).map((o, i) => <li key={i}>{o}</li>)}</ul>
-        </Block>
-      )}
-      {Array.isArray(obj.sections) && obj.sections.length > 0 && (
-        <Block title="Ders İçeriği">
-          {(obj.sections as Array<Record<string, string>>).map((s, i) => (
-            <div key={i} className="section-block">
-              <h4>{s.heading}</h4>
-              <p>{s.body}</p>
-            </div>
-          ))}
-        </Block>
-      )}
-      {Array.isArray(obj.examples) && obj.examples.length > 0 && (
-        <Block title="Örnekler">
-          <ul>{(obj.examples as Array<Record<string, unknown>>).map((e, i) => (
-            <li key={i}><strong>{e.title as string}</strong> — {e.description as string}</li>
-          ))}</ul>
-        </Block>
-      )}
-      {Array.isArray(obj.key_points) && obj.key_points.length > 0 && (
-        <Block title="Anahtar Noktalar">
-          <ul>{(obj.key_points as string[]).map((k, i) => <li key={i}>{k}</li>)}</ul>
-        </Block>
-      )}
-      {typeof obj.one_liner === "string" && (
-        <Block title="Tek Cümleyle"><p className="one-liner">{obj.one_liner}</p></Block>
-      )}
-      {Array.isArray(obj.terms) && obj.terms.length > 0 && (
-        <Block title="Sözlük">
-          <dl>{(obj.terms as Array<Record<string, string>>).map((t, i) => (
-            <div key={i} className="term-row"><dt>{t.term}</dt><dd>{t.definition}</dd></div>
-          ))}</dl>
-        </Block>
-      )}
-      {Array.isArray(obj.cards) && obj.cards.length > 0 && (
-        <Block title="Flash Kartlar">
-          <div className="cards-grid">
-            {(obj.cards as Array<Record<string, string>>).map((card, i) => (
-              <div key={i} className="flashcard">
-                <div className="flash-front">{card.front}</div>
-                <div className="flash-back">{card.back}</div>
-              </div>
-            ))}
-          </div>
-        </Block>
-      )}
-      {Array.isArray(obj.questions) && obj.questions.length > 0 && (
-        <Block title="Quiz">
-          <ol className="quiz-list">
-            {(obj.questions as Array<Record<string, unknown>>).map((q, i) => (
-              <li key={i} className="quiz-q">
-                <div className="quiz-question">{q.question as string}</div>
-                <ul className="quiz-opts">
-                  {(q.options as string[]).map((opt, j) => (
-                    <li key={j} className={j === (q.correct_index as number) ? "correct" : ""}>
-                      {String.fromCharCode(65 + j)}. {opt}
-                    </li>
-                  ))}
-                </ul>
-                <div className="quiz-expl"><em>Açıklama:</em> {q.explanation as string}</div>
-              </li>
-            ))}
-          </ol>
-        </Block>
-      )}
-      {typeof obj.summary === "string" && (
-        <Block title="Özet"><p>{obj.summary}</p></Block>
-      )}
-      {typeof obj.estimated_minutes === "number" && (
-        <div className="meta-line">Tahmini süre: ~{obj.estimated_minutes} dk</div>
-      )}
-      {typeof obj.passing_score === "number" && (
-        <div className="meta-line">Geçme barajı: {obj.passing_score} / {(obj.questions as unknown[]).length}</div>
-      )}
-    </div>
-  );
-}
-
-function Block({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="block">
-      <h4 className="block-title">{title}</h4>
-      <div className="block-body">{children}</div>
     </div>
   );
 }

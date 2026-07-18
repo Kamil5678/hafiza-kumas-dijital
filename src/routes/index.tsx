@@ -1,6 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { CATEGORIES, STATUSES, useEntries, useTasks, isSameDay, daysAgo } from "@/lib/tekstil-store";
+import {
+  CATEGORIES,
+  STATUSES,
+  useEntries,
+  useTasks,
+  isSameDay,
+  daysAgo,
+} from "@/lib/tekstil-store";
 import { EntryForm } from "@/components/EntryForm";
 import { EntryCard } from "@/components/EntryCard";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -39,15 +46,9 @@ function Panel() {
   const [open, setOpen] = useState(false);
   const today = new Date();
 
-  const todayEntries = useMemo(
-    () => entries.filter((e) => isSameDay(e.date, today)),
-    [entries],
-  );
+  const todayEntries = useMemo(() => entries.filter((e) => isSameDay(e.date, today)), [entries]);
 
-  const dueTasks = useMemo(
-    () => tasks.filter((t) => t.status !== "tamam").slice(0, 5),
-    [tasks],
-  );
+  const dueTasks = useMemo(() => tasks.filter((t) => t.status !== "tamam").slice(0, 5), [tasks]);
 
   const toReview = useMemo(
     () =>
@@ -112,9 +113,24 @@ function Panel() {
 
         {/* Quick nav tiles */}
         <section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Tile to="/bilgi-bankasi" icon={BookOpen} title="Bilgi Bankası" hint={`${entries.length} not`} />
-          <Tile to="/gunluk-tekrar" icon={RotateCcw} title="Günlük Tekrar" hint={`${toReview.length} bekliyor`} />
-          <Tile to="/gorevler" icon={ListTodo} title="Görev Panosu" hint={`${dueTasks.length} açık`} />
+          <Tile
+            to="/bilgi-bankasi"
+            icon={BookOpen}
+            title="Bilgi Bankası"
+            hint={`${entries.length} not`}
+          />
+          <Tile
+            to="/gunluk-tekrar"
+            icon={RotateCcw}
+            title="Günlük Tekrar"
+            hint={`${toReview.length} bekliyor`}
+          />
+          <Tile
+            to="/gorevler"
+            icon={ListTodo}
+            title="Görev Panosu"
+            hint={`${dueTasks.length} açık`}
+          />
           <Tile to="/quiz" icon={Sparkles} title="Mini Quiz" hint="Kendini yokla" />
         </section>
 

@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AiAsistanRouteImport } from './routes/ai-asistan'
+import { Route as BaslangicPaketiRouteImport } from './routes/baslangic-paketi'
 import { Route as BilgiBankasiRouteImport } from './routes/bilgi-bankasi'
 import { Route as EliseStudioRouteImport } from './routes/elise-studio'
 import { Route as GorevlerRouteImport } from './routes/gorevler'
@@ -24,6 +26,16 @@ import { Route as KategoriSlugRouteImport } from './routes/kategori.$slug'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiAsistanRoute = AiAsistanRouteImport.update({
+  id: '/ai-asistan',
+  path: '/ai-asistan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BaslangicPaketiRoute = BaslangicPaketiRouteImport.update({
+  id: '/baslangic-paketi',
+  path: '/baslangic-paketi',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BilgiBankasiRoute = BilgiBankasiRouteImport.update({
@@ -79,6 +91,8 @@ const KategoriSlugRoute = KategoriSlugRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ai-asistan': typeof AiAsistanRoute
+  '/baslangic-paketi': typeof BaslangicPaketiRoute
   '/bilgi-bankasi': typeof BilgiBankasiRoute
   '/elise-studio': typeof EliseStudioRoute
   '/gorevler': typeof GorevlerRoute
@@ -92,6 +106,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ai-asistan': typeof AiAsistanRoute
+  '/baslangic-paketi': typeof BaslangicPaketiRoute
   '/bilgi-bankasi': typeof BilgiBankasiRoute
   '/elise-studio': typeof EliseStudioRoute
   '/gorevler': typeof GorevlerRoute
@@ -106,6 +122,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ai-asistan': typeof AiAsistanRoute
+  '/baslangic-paketi': typeof BaslangicPaketiRoute
   '/bilgi-bankasi': typeof BilgiBankasiRoute
   '/elise-studio': typeof EliseStudioRoute
   '/gorevler': typeof GorevlerRoute
@@ -121,6 +139,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/ai-asistan'
+    | '/baslangic-paketi'
     | '/bilgi-bankasi'
     | '/elise-studio'
     | '/gorevler'
@@ -134,6 +154,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/ai-asistan'
+    | '/baslangic-paketi'
     | '/bilgi-bankasi'
     | '/elise-studio'
     | '/gorevler'
@@ -147,6 +169,8 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/ai-asistan'
+    | '/baslangic-paketi'
     | '/bilgi-bankasi'
     | '/elise-studio'
     | '/gorevler'
@@ -161,6 +185,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AiAsistanRoute: typeof AiAsistanRoute
+  BaslangicPaketiRoute: typeof BaslangicPaketiRoute
   BilgiBankasiRoute: typeof BilgiBankasiRoute
   EliseStudioRoute: typeof EliseStudioRoute
   GorevlerRoute: typeof GorevlerRoute
@@ -180,6 +206,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai-asistan': {
+      id: '/ai-asistan'
+      path: '/ai-asistan'
+      fullPath: '/ai-asistan'
+      preLoaderRoute: typeof AiAsistanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/baslangic-paketi': {
+      id: '/baslangic-paketi'
+      path: '/baslangic-paketi'
+      fullPath: '/baslangic-paketi'
+      preLoaderRoute: typeof BaslangicPaketiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/bilgi-bankasi': {
@@ -257,6 +297,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AiAsistanRoute: AiAsistanRoute,
+  BaslangicPaketiRoute: BaslangicPaketiRoute,
   BilgiBankasiRoute: BilgiBankasiRoute,
   EliseStudioRoute: EliseStudioRoute,
   GorevlerRoute: GorevlerRoute,

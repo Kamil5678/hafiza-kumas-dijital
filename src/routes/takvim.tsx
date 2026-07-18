@@ -17,8 +17,18 @@ export const Route = createFileRoute("/takvim")({
 });
 
 const AY_ADLARI = [
-  "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
-  "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık",
+  "Ocak",
+  "Şubat",
+  "Mart",
+  "Nisan",
+  "Mayıs",
+  "Haziran",
+  "Temmuz",
+  "Ağustos",
+  "Eylül",
+  "Ekim",
+  "Kasım",
+  "Aralık",
 ];
 const GUN_ADLARI = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
 
@@ -52,7 +62,7 @@ function TakvimPage() {
   const dayKey = (d: number) =>
     `${cursor.y}-${String(cursor.m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
-  const selectedEntries = selected ? byDay[selected] ?? [] : [];
+  const selectedEntries = selected ? (byDay[selected] ?? []) : [];
 
   return (
     <div className="min-h-screen bg-background">

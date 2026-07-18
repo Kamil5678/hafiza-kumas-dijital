@@ -30,10 +30,7 @@ function EliseStudio() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
 
-  const eliseEntries = useMemo(
-    () => entries.filter((e) => e.category === "elise"),
-    [entries],
-  );
+  const eliseEntries = useMemo(() => entries.filter((e) => e.category === "elise"), [entries]);
 
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -63,8 +60,8 @@ function EliseStudio() {
           </div>
           <h1 className="mt-3 font-display text-5xl">Elisé</h1>
           <p className="mt-3 max-w-xl text-sm text-muted-foreground">
-            Markanın ruhunu, ilhamlarını ve stratejisini bir arada tut. Notlar, moodlar ve
-            anahtar kelimeler tek bir stüdyoda.
+            Markanın ruhunu, ilhamlarını ve stratejisini bir arada tut. Notlar, moodlar ve anahtar
+            kelimeler tek bir stüdyoda.
           </p>
 
           <div className="mt-6 flex flex-wrap gap-2">

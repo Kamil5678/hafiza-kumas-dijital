@@ -170,9 +170,7 @@ function CategoryPage() {
         {filtered.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-card/50 p-10 text-center">
             <p className="font-display text-xl">Henüz kayıt yok.</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Bu kategoriye ilk notunu ekle.
-            </p>
+            <p className="mt-2 text-sm text-muted-foreground">Bu kategoriye ilk notunu ekle.</p>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">

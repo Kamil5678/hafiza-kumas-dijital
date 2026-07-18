@@ -1,6 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { CATEGORIES, STATUSES, useEntries, type CategoryKey, type Status } from "@/lib/tekstil-store";
+import {
+  CATEGORIES,
+  STATUSES,
+  useEntries,
+  type CategoryKey,
+  type Status,
+} from "@/lib/tekstil-store";
 import { EntryCard } from "@/components/EntryCard";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Input } from "@/components/ui/input";

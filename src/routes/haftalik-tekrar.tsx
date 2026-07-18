@@ -75,9 +75,8 @@ function WeeklyReview() {
           </p>
           <h1 className="mt-2 font-display text-4xl">Bu hafta neyi pekiştir?</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            "Öğrenildi" olarak işaretlemediğin tüm notlar burada. Her kartın
-            üzerindeki durum etiketine tıklayarak "tekrar ediliyor" veya
-            "öğrenildi" olarak güncelleyebilirsin.
+            "Öğrenildi" olarak işaretlemediğin tüm notlar burada. Her kartın üzerindeki durum
+            etiketine tıklayarak "tekrar ediliyor" veya "öğrenildi" olarak güncelleyebilirsin.
           </p>
         </div>
 
@@ -104,9 +103,7 @@ function WeeklyReview() {
                 <section key={c.key}>
                   <div className="mb-3 flex items-baseline justify-between">
                     <h2 className="font-display text-2xl">{c.label}</h2>
-                    <span className="text-xs text-muted-foreground">
-                      {list.length} tekrar
-                    </span>
+                    <span className="text-xs text-muted-foreground">{list.length} tekrar</span>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     {list.map((e) => (

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useEntries, CATEGORIES, type CategoryKey } from "@/lib/tekstil-store";
+import { useEntries, CATEGORIES, type CategoryKey, type Entry } from "@/lib/tekstil-store";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,9 +104,7 @@ function PdfPage() {
             >
               <Checkbox
                 checked={!!selected[e.id]}
-                onCheckedChange={(v) =>
-                  setSelected((s) => ({ ...s, [e.id]: Boolean(v) }))
-                }
+                onCheckedChange={(v) => setSelected((s) => ({ ...s, [e.id]: Boolean(v) }))}
               />
               <div className="min-w-0 flex-1">
                 <div className="font-medium">{e.title}</div>
@@ -162,7 +160,7 @@ function FilterPill({
   );
 }
 
-function PrintDocument({ title, entries }: { title: string; entries: any[] }) {
+function PrintDocument({ title, entries }: { title: string; entries: Entry[] }) {
   return (
     <article className="mx-auto max-w-3xl bg-white p-6 text-black print:p-0">
       <header className="border-b pb-4">

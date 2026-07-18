@@ -8,14 +8,7 @@ const InputSchema = z.object({
   text: z.string().min(20),
 });
 
-const CategoryEnum = z.enum([
-  "kumas",
-  "moda",
-  "icgiyim",
-  "strateji",
-  "istatistik",
-  "elise",
-]);
+const CategoryEnum = z.enum(["kumas", "moda", "icgiyim", "strateji", "istatistik", "elise"]);
 
 const NoteSchema = z.object({
   title: z.string(),
@@ -92,8 +85,7 @@ export const analyzePdf = createServerFn({ method: "POST" })
         return {
           overallCategory: "kumas",
           overallSubcategory: null,
-          overallSummary:
-            "PDF otomatik analiz edilemedi. Kartları elle düzenleyebilirsin.",
+          overallSummary: "PDF otomatik analiz edilemedi. Kartları elle düzenleyebilirsin.",
           overallKeywords: [],
           notes: [],
         };

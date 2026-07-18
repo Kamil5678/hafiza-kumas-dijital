@@ -2,15 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import {
-  Library,
-  Upload,
-  Loader2,
-  Sparkles,
-  FileText,
-  Trash2,
-  CheckCircle2,
-} from "lucide-react";
+import { Library, Upload, Loader as Loader2, Sparkles, FileText, Trash2, CircleCheck as CheckCircle2 } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,9 +83,7 @@ function PdfLibraryPage() {
 
   async function extractPdf(file: File) {
     const pdfjsLib = await import("pdfjs-dist");
-    const workerUrl = (
-      await import("pdfjs-dist/build/pdf.worker.min.mjs?url")
-    ).default;
+    const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
     pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
     const buf = await file.arrayBuffer();
@@ -103,7 +93,7 @@ function PdfLibraryPage() {
       const page = await doc.getPage(i);
       const content = await page.getTextContent();
       const pageText = content.items
-        .map((it: any) => (typeof it.str === "string" ? it.str : ""))
+        .map((it: { str?: unknown }) => (typeof it.str === "string" ? it.str : ""))
         .join(" ");
       text += `\n\n[Sayfa ${i}]\n${pageText}`;
     }
@@ -139,9 +129,7 @@ function PdfLibraryPage() {
         fileToDataUrl(file),
       ]);
       if (text.trim().length < 40) {
-        toast.error(
-          "PDF'ten metin çıkarılamadı. Taranmış PDF olabilir; şimdilik desteklenmiyor.",
-        );
+        toast.error("PDF'ten metin çıkarılamadı. Taranmış PDF olabilir; şimdilik desteklenmiyor.");
         return;
       }
       setStage("AI PDF'i okuyor ve kartları hazırlıyor…");
@@ -165,9 +153,9 @@ function PdfLibraryPage() {
         })),
       });
       toast.success("Taslak hazır. Kartları önizle ve onayla.");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      toast.error(err?.message ?? "PDF işlenemedi.");
+      toast.error(err instanceof Error ? err.message : "PDF işlenemedi.");
     } finally {
       setBusy(false);
       setStage("");
@@ -225,8 +213,8 @@ function PdfLibraryPage() {
           <h1 className="font-display text-4xl">PDF Kütüphanesi</h1>
         </div>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          PDF yükle — sistem metni çıkarır, uygun kategoriye önerir ve küçük not
-          kartları üretir. Sen onaylamadan hiçbir şey kaydedilmez.
+          PDF yükle — sistem metni çıkarır, uygun kategoriye önerir ve küçük not kartları üretir.
+          Sen onaylamadan hiçbir şey kaydedilmez.
         </p>
 
         <section className="mt-6 rounded-2xl border border-border bg-card p-5">
@@ -265,9 +253,7 @@ function PdfLibraryPage() {
 
         <section className="mt-10">
           <h2 className="font-display text-2xl">Kütüphane</h2>
-          <p className="text-xs text-muted-foreground">
-            Yüklenen PDF'ler ve bağlı not sayıları.
-          </p>
+          <p className="text-xs text-muted-foreground">Yüklenen PDF'ler ve bağlı not sayıları.</p>
           <div className="mt-4 grid gap-3">
             {pdfs.length === 0 && (
               <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
@@ -335,8 +321,7 @@ function DraftReview({
         <div>
           <div className="font-display text-2xl">AI Taslağı — Önizleme</div>
           <div className="text-xs text-muted-foreground">
-            {draft.fileName} · {draft.pageCount} sayfa · {draft.notes.length} kart
-            önerildi
+            {draft.fileName} · {draft.pageCount} sayfa · {draft.notes.length} kart önerildi
           </div>
         </div>
         <div className="ml-auto flex gap-2">
@@ -351,9 +336,7 @@ function DraftReview({
       </div>
 
       <div className="mt-4 rounded-xl bg-background p-4">
-        <div className="text-xs uppercase tracking-wider text-muted-foreground">
-          Genel özet
-        </div>
+        <div className="text-xs uppercase tracking-wider text-muted-foreground">Genel özet</div>
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <Badge variant="outline">
             {CATEGORIES.find((c) => c.key === draft.overall.category)?.label}
@@ -372,11 +355,7 @@ function DraftReview({
 
       <div className="mt-5 grid gap-3">
         {draft.notes.map((n, i) => (
-          <NoteEditor
-            key={i}
-            note={n}
-            onChange={(patch) => updateNote(i, patch)}
-          />
+          <NoteEditor key={i} note={n} onChange={(patch) => updateNote(i, patch)} />
         ))}
         {draft.notes.length === 0 && (
           <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
@@ -437,9 +416,7 @@ function NoteEditor({
               </label>
               <Select
                 value={note.category}
-                onValueChange={(v) =>
-                  onChange({ category: v as CategoryKey, subcategory: null })
-                }
+                onValueChange={(v) => onChange({ category: v as CategoryKey, subcategory: null })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -459,9 +436,7 @@ function NoteEditor({
               </label>
               <Select
                 value={note.subcategory ?? "__none__"}
-                onValueChange={(v) =>
-                  onChange({ subcategory: v === "__none__" ? null : v })
-                }
+                onValueChange={(v) => onChange({ subcategory: v === "__none__" ? null : v })}
                 disabled={!cat || cat.subcategories.length === 0}
               >
                 <SelectTrigger>

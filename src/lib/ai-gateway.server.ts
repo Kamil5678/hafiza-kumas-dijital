@@ -40,10 +40,7 @@ export function createLovableAiGatewayRunIdFetch(initialRunId?: string) {
   };
 }
 
-export function createLovableAiGatewayProvider(
-  lovableApiKey: string,
-  initialRunId?: string,
-) {
+export function createLovableAiGatewayProvider(lovableApiKey: string, initialRunId?: string) {
   const runIdFetch = createLovableAiGatewayRunIdFetch(initialRunId);
   const provider = createOpenAICompatible({
     name: "lovable",

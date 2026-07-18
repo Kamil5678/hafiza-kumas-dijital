@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { addEntry, CATEGORIES, fileToDataUrl, STATUSES, type CategoryKey, type Status } from "@/lib/tekstil-store";
+import {
+  addEntry,
+  CATEGORIES,
+  fileToDataUrl,
+  STATUSES,
+  type CategoryKey,
+  type Status,
+} from "@/lib/tekstil-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,7 +42,6 @@ export function EntryForm({
 
   const currentCat = CATEGORIES.find((c) => c.key === category);
   const subs = currentCat?.subcategories ?? [];
-
 
   async function onFiles(files: FileList | null) {
     if (!files) return;
@@ -77,7 +83,6 @@ export function EntryForm({
     setSaving(false);
     onDone?.();
   }
-
 
   return (
     <form onSubmit={submit} className="space-y-5">
@@ -157,7 +162,6 @@ export function EntryForm({
           </Select>
         </div>
       )}
-
 
       <div className="space-y-2">
         <Label htmlFor="summary">3 Cümlelik Özet</Label>

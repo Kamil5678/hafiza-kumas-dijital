@@ -1,4 +1,11 @@
-import { CATEGORIES, deleteEntry, STATUSES, updateEntry, type Entry, type Status } from "@/lib/tekstil-store";
+import {
+  CATEGORIES,
+  deleteEntry,
+  STATUSES,
+  updateEntry,
+  type Entry,
+  type Status,
+} from "@/lib/tekstil-store";
 import { Badge } from "@/components/ui/badge";
 import { Trash2 } from "lucide-react";
 import {
@@ -63,7 +70,6 @@ export function EntryCard({ entry }: { entry: Entry }) {
           </div>
           <h3 className="font-display text-xl leading-tight">{entry.title}</h3>
         </div>
-
 
         <AlertDialog>
           <AlertDialogTrigger asChild>

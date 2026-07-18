@@ -8,6 +8,7 @@ import {
   Sparkles,
   FileText,
   Palette,
+  Library,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -20,6 +21,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { to: "/", label: "Bugünkü Panel", icon: LayoutDashboard },
   { to: "/bilgi-bankasi", label: "Bilgi Bankası", icon: BookOpen },
+  { to: "/pdf-kutuphane", label: "PDF Kütüphanesi", icon: Library },
   { to: "/takvim", label: "Takvim", icon: Calendar },
   { to: "/gorevler", label: "Görev Panosu", icon: ListTodo },
   { to: "/gunluk-tekrar", label: "Günlük Tekrar", icon: RotateCcw },

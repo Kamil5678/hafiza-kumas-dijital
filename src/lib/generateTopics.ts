@@ -42,7 +42,7 @@ export function generateTopics(
     return {
       ok: false,
       topics: [],
-      message: `The "${category}" dataset has only ${pool.length} topics, but you requested ${size}. Try a smaller package or choose "All categories".`,
+      message: `"${category}" veri setinde sadece ${pool.length} konu var, siz ${size} konu istediniz. Daha küçük bir paket deneyin veya "Tümü"nü seçin.`,
     };
   }
 

@@ -1,1 +1,1 @@
-{"root":["./src/App.tsx","./src/main.tsx","./src/navigation.ts","./src/vite-env.d.ts","./src/components/NavButtons.tsx","./src/data/topics.ts","./src/lib/generateTopics.ts","./src/lib/persistence.ts","./src/lib/supabaseClient.ts"],"version":"5.9.3"}
+{"root":["./src/App.tsx","./src/main.tsx","./src/navigation.ts","./src/vite-env.d.ts","./src/data/topics.ts","./src/lib/generateTopics.ts","./src/lib/persistence.ts","./src/lib/supabaseClient.ts"],"version":"5.9.3"}

@@ -1,72 +1,89 @@
 import { useState, useCallback } from "react";
 
 export type Screen =
-  | "app-dashboard"
-  | "textile-knowledge"
-  | "fashion"
-  | "ai-assistant"
-  | "pdf-library"
-  | "flashcards"
-  | "quiz"
-  | "textile-os"
-  | "elise-brand-studio"
-  | "skp"
+  | "panel"
+  | "tekstil-bilgileri"
+  | "moda-bilgileri"
+  | "ic-giyim"
+  | "strateji"
+  | "istatistik"
+  | "elise-studio"
+  | "bilgi-bankasi"
+  | "pdf-kutuphanesi"
+  | "takvim"
+  | "gorev-panosu"
+  | "gunluk-tekrar"
+  | "haftalik-tekrar"
+  | "mini-quiz"
+  | "pdf-kitabi"
+  | "ai-asistan"
+  | "baslangic-paketi"
   | "skp-generate"
   | "skp-review"
   | "skp-save"
   | "skp-saved"
-  | "skp-plan"
-  | "trend-analytics"
-  | "supply-chain"
-  | "quality-lab"
-  | "inventory"
-  | "settings";
+  | "skp-plan";
 
-export interface NavEntry {
-  screen: Screen;
-  parent: Screen | null;
+const LABELS: Record<Screen, string> = {
+  panel: "Panel",
+  "tekstil-bilgileri": "Tekstil Bilgileri",
+  "moda-bilgileri": "Moda Bilgileri",
+  "ic-giyim": "İç Giyim",
+  strateji: "Strateji",
+  istatistik: "İstatistik",
+  "elise-studio": "Elisé Studio",
+  "bilgi-bankasi": "Bilgi Bankası",
+  "pdf-kutuphanesi": "PDF Kütüphanesi",
+  takvim: "Takvim",
+  "gorev-panosu": "Görev Panosu",
+  "gunluk-tekrar": "Günlük Tekrar",
+  "haftalik-tekrar": "Haftalık Tekrar",
+  "mini-quiz": "Mini Quiz",
+  "pdf-kitabi": "PDF Kitabı",
+  "ai-asistan": "AI Asistan",
+  "baslangic-paketi": "Başlangıç Paketi",
+  "skp-generate": "Konu Üret",
+  "skp-review": "Konular",
+  "skp-save": "Kaydet",
+  "skp-saved": "Kaydedilenler",
+  "skp-plan": "Günlük Plan",
+};
+
+const PARENT: Partial<Record<Screen, Screen>> = {
+  "baslangic-paketi": "panel",
+  "skp-generate": "baslangic-paketi",
+  "skp-review": "skp-generate",
+  "skp-save": "skp-review",
+  "skp-saved": "baslangic-paketi",
+  "skp-plan": "baslangic-paketi",
+};
+
+export function labelOf(s: Screen): string {
+  return LABELS[s];
+}
+
+export function parentOf(s: Screen): Screen | null {
+  return PARENT[s] ?? null;
 }
 
 export interface Nav {
   current: Screen;
-  navigate: (screen: Screen, parent?: Screen | null) => void;
+  navigate: (s: Screen) => void;
   back: () => void;
   home: () => void;
   canGoBack: boolean;
-  parent: Screen | null;
+  parentLabel: string | null;
 }
 
-const PARENTS: Record<Screen, Screen | null> = {
-  "app-dashboard": null,
-  "textile-knowledge": "app-dashboard",
-  fashion: "app-dashboard",
-  "ai-assistant": "app-dashboard",
-  "pdf-library": "app-dashboard",
-  flashcards: "app-dashboard",
-  quiz: "app-dashboard",
-  "textile-os": "app-dashboard",
-  "elise-brand-studio": "app-dashboard",
-  skp: "textile-os",
-  "skp-generate": "skp",
-  "skp-review": "skp-generate",
-  "skp-save": "skp-review",
-  "skp-saved": "skp",
-  "skp-plan": "skp",
-  "trend-analytics": "textile-os",
-  "supply-chain": "textile-os",
-  "quality-lab": "textile-os",
-  inventory: "textile-os",
-  settings: "textile-os",
-};
-
 export function useNavigation(): Nav {
-  const [history, setHistory] = useState<Screen[]>(["app-dashboard"]);
+  const [history, setHistory] = useState<Screen[]>(["panel"]);
 
   const current = history[history.length - 1];
-  const parent = PARENTS[current] ?? null;
+  const parent = PARENT[current] ?? null;
+  const parentLabel = parent ? LABELS[parent] : null;
 
-  const navigate = useCallback((screen: Screen) => {
-    setHistory((prev) => [...prev, screen]);
+  const navigate = useCallback((s: Screen) => {
+    setHistory((prev) => [...prev, s]);
   }, []);
 
   const back = useCallback(() => {
@@ -74,7 +91,7 @@ export function useNavigation(): Nav {
   }, []);
 
   const home = useCallback(() => {
-    setHistory(["app-dashboard"]);
+    setHistory(["panel"]);
   }, []);
 
   return {
@@ -83,6 +100,6 @@ export function useNavigation(): Nav {
     back,
     home,
     canGoBack: history.length > 1,
-    parent,
+    parentLabel,
   };
 }

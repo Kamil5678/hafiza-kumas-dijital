@@ -16,12 +16,12 @@ export interface DistributeResult {
 }
 
 function packageName(category: string, size: number): string {
-  const stamp = new Date().toLocaleDateString("en-GB", {
+  const stamp = new Date().toLocaleDateString("tr-TR", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
-  return `${category} · ${size} topics · ${stamp}`;
+  return `${category} · ${size} konu · ${stamp}`;
 }
 
 export async function savePackage(
@@ -31,11 +31,11 @@ export async function savePackage(
   if (!supabaseConfigured) {
     return {
       ok: false,
-      message: "Saving is unavailable because the database is not configured.",
+      message: "Veritabanı yapılandırılmadığından kaydetme kullanılamıyor.",
     };
   }
   if (topics.length === 0) {
-    return { ok: false, message: "No topics to save." };
+    return { ok: false, message: "Kaydedilecek konu yok." };
   }
 
   try {
@@ -50,7 +50,7 @@ export async function savePackage(
       .single();
 
     if (pkgErr || !pkg) {
-      return { ok: false, message: `Could not save package: ${pkgErr?.message}` };
+      return { ok: false, message: `Paket kaydedilemedi: ${pkgErr?.message}` };
     }
 
     const rows = topics.map((t, i) => ({
@@ -65,18 +65,18 @@ export async function savePackage(
     const { error: topicsErr } = await supabase.from("saved_topics").insert(rows);
 
     if (topicsErr) {
-      return { ok: false, message: `Could not save topics: ${topicsErr.message}` };
+      return { ok: false, message: `Konular kaydedilemedi: ${topicsErr.message}` };
     }
 
     return {
       ok: true,
       packageId: pkg.id,
-      message: `Saved ${topics.length} topics as "${packageName(category, topics.length)}".`,
+      message: `${topics.length} konu "${packageName(category, topics.length)}" olarak kaydedildi.`,
     };
   } catch (e) {
     return {
       ok: false,
-      message: `Unexpected error while saving: ${(e as Error).message}`,
+      message: `Kaydetme sırasında beklenmeyen hata: ${(e as Error).message}`,
     };
   }
 }
@@ -88,11 +88,11 @@ export async function distributeToDailyPlan(
   if (!supabaseConfigured) {
     return {
       ok: false,
-      message: "Daily plan is unavailable because the database is not configured.",
+      message: "Veritabanı yapılandırılmadığından günlük plan kullanılamıyor.",
     };
   }
   if (topics.length === 0) {
-    return { ok: false, message: "No topics to distribute." };
+    return { ok: false, message: "Dağıtılacak konu yok." };
   }
 
   try {
@@ -107,7 +107,7 @@ export async function distributeToDailyPlan(
       .single();
 
     if (pkgErr || !pkg) {
-      return { ok: false, message: `Could not create package: ${pkgErr?.message}` };
+      return { ok: false, message: `Paket oluşturulamadı: ${pkgErr?.message}` };
     }
 
     const topicRows = topics.map((t, i) => ({
@@ -125,7 +125,7 @@ export async function distributeToDailyPlan(
       .select("id");
 
     if (topicsErr || !insertedTopics) {
-      return { ok: false, message: `Could not save topics: ${topicsErr?.message}` };
+      return { ok: false, message: `Konular kaydedilemedi: ${topicsErr?.message}` };
     }
 
     const start = new Date();
@@ -144,7 +144,7 @@ export async function distributeToDailyPlan(
     const { error: planErr } = await supabase.from("daily_plan").insert(planRows);
 
     if (planErr) {
-      return { ok: false, message: `Could not build daily plan: ${planErr.message}` };
+      return { ok: false, message: `Günlük plan oluşturulamadı: ${planErr.message}` };
     }
 
     const startDate = start.toISOString().slice(0, 10);
@@ -153,12 +153,12 @@ export async function distributeToDailyPlan(
       packageId: pkg.id,
       daysPlanned: planRows.length,
       startDate,
-      message: `Distributed ${planRows.length} topics across ${planRows.length} days, starting ${startDate}.`,
+      message: `${planRows.length} konu ${planRows.length} güne dağıtıldı, başlangıç ${startDate}.`,
     };
   } catch (e) {
     return {
       ok: false,
-      message: `Unexpected error while distributing: ${(e as Error).message}`,
+      message: `Dağıtım sırasında beklenmeyen hata: ${(e as Error).message}`,
     };
   }
 }
@@ -177,7 +177,7 @@ export async function fetchSavedPackages(): Promise<{
   message: string;
 }> {
   if (!supabaseConfigured) {
-    return { ok: false, packages: [], message: "Database not configured." };
+    return { ok: false, packages: [], message: "Veritabanı yapılandırılmadı." };
   }
   try {
     const { data, error } = await supabase

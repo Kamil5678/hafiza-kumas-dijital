@@ -52,6 +52,7 @@ export function EntryForm({
     setSaving(true);
     addEntry({
       category,
+      subcategory: subcategory || undefined,
       title: title.trim(),
       date,
       summary: summary.trim(),
@@ -72,6 +73,7 @@ export function EntryForm({
     setReflection("");
     setImages([]);
     setStatus("ogrenilecek");
+    setSubcategory("");
     setSaving(false);
     onDone?.();
   }
